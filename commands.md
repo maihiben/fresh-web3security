@@ -1,0 +1,1 @@
+npx create-next-app@latest . --typescript --app --eslint --tailwind --src-dir --import-alias "@/*"
