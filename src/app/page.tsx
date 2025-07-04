@@ -1,5 +1,7 @@
 import Header from "../components/Header";
 import HeroSection from "../components/HeroSection";
+import LiveActivityFeed from "../components/LiveActivityFeed";
+import HowItWorks from "../components/HowItWorks";
 import FeaturesGrid from "../components/FeaturesGrid";
 import WhyWeb3Security from "../components/WhyWeb3Security";
 import Footer from "../components/Footer";
@@ -10,8 +12,10 @@ export default function Home() {
       <Header />
       <main className="flex-1 flex flex-col gap-0">
         <HeroSection />
+        <LiveActivityFeed />
         <FeaturesGrid />
         <WhyWeb3Security />
+        <HowItWorks />        
       </main>
       <Footer />
     </div>
