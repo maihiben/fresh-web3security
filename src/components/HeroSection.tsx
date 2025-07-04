@@ -7,9 +7,9 @@ import Image from "next/image";
 
 const HeroSection: React.FC = () => {
   return (
-    <section className="relative flex flex-col md:flex-row items-center justify-between min-h-[70vh] pt-32 pb-12 px-4 md:px-12 bg-gradient-to-b from-[#0D0D0D] via-[#111111] to-[#181A20] overflow-hidden">
+    <section className="relative flex flex-col md:flex-row items-center justify-center md:justify-center min-h-[70vh] pt-32 pb-12 px-4 md:px-12 bg-gradient-to-b from-[#0D0D0D] via-[#111111] to-[#181A20] overflow-hidden">
       {/* Left: Headline, Subheadline, CTA */}
-      <div className="flex-1 flex flex-col items-start justify-center z-10 max-w-xl">
+      <div className="flex-1 flex flex-col items-start justify-center z-10 max-w-xl pl-0 md:pl-8">
         <div className="mb-6">
           <span className="inline-flex items-center justify-center rounded-full bg-cyan-400/20 p-3 shadow-cyan-400/30 shadow-md mb-4">
             <ShieldCheck className="text-cyan-400 w-10 h-10" />
