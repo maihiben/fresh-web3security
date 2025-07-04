@@ -7,35 +7,35 @@ const features = [
     icon: <Wallet className="text-cyan-400 w-10 h-10 md:w-12 md:h-12" />,
     title: "Wallet Analyzer",
     description: "Scan your wallet for vulnerabilities, suspicious activity, and risky assets across EVM chains.",
-    href: "#wallet-analyzer",
+    href: "/tools/wallet-analyzer",
     button: "Analyze Wallet"
   },
   {
     icon: <Ban className="text-pink-500 w-10 h-10 md:w-12 md:h-12" />,
     title: "Revoke Token Approvals",
     description: "Easily find and revoke dangerous or unnecessary token approvals to protect your assets.",
-    href: "#revoke-token-approvals",
+    href: "/tools/revoke-token-approvals",
     button: "Revoke Approvals"
   },
   {
     icon: <ShieldAlert className="text-lime-400 w-10 h-10 md:w-12 md:h-12" />,
     title: "Detect Fake Tokens",
     description: "Identify scam tokens and avoid phishing attempts with real-time detection algorithms.",
-    href: "#detect-fake-tokens",
+    href: "/tools/detect-fake-tokens",
     button: "Detect Tokens"
   },
   {
     icon: <FileText className="text-purple-400 w-10 h-10 md:w-12 md:h-12" />,
     title: "Smart Contract Scanner",
     description: "Analyze smart contracts for vulnerabilities and get instant security insights before interacting.",
-    href: "#smart-contract-scanner",
+    href: "/tools/smart-contract-scanner",
     button: "Scan Contract"
   },
   {
     icon: <BookOpen className="text-orange-400 w-10 h-10 md:w-12 md:h-12" />,
     title: "Learn Web3 Security",
     description: "Access guides and resources to boost your knowledge and stay safe in the Web3 ecosystem.",
-    href: "#learn-web3-security",
+    href: "/tools/learn",
     button: "Start Learning"
   },
 ];

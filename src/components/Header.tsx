@@ -8,7 +8,7 @@ import LiveActivityNotice from "./LiveActivityNotice";
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Tools", href: "/tools" },
-  { name: "Learn", href: "/learn" },
+  { name: "Learn", href: "/tools/learn" },
   { name: "About", href: "/about" },
 ];
 

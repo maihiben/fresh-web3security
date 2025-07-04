@@ -42,11 +42,11 @@ const FAQ: React.FC = () => {
       <h2 className="font-orbitron text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-white text-center mb-12 drop-shadow-lg">
         Frequently Asked Questions
       </h2>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
         {faqs.map((faq, idx) => (
           <GlassCard key={faq.q} className="p-0 overflow-hidden">
             <button
-              className="w-full flex items-center justify-between px-6 py-5 md:py-6 text-left focus:outline-none group"
+              className="w-full flex items-center justify-between px-4 py-3 md:py-4 text-left focus:outline-none group"
               onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
               aria-expanded={openIdx === idx}
               aria-controls={`faq-answer-${idx}`}
@@ -62,7 +62,7 @@ const FAQ: React.FC = () => {
             </button>
             <div
               id={`faq-answer-${idx}`}
-              className={`px-6 pb-5 md:pb-6 text-gray-300 text-base md:text-lg transition-all duration-300 ease-in-out ${openIdx === idx ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
+              className={`px-4 pb-3 md:pb-4 text-gray-300 text-base md:text-lg transition-all duration-300 ease-in-out ${openIdx === idx ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
               aria-hidden={openIdx !== idx}
             >
               {faq.a}
