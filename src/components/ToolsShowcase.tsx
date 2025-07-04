@@ -42,7 +42,7 @@ const tools = [
     icon: <BookOpen className="text-orange-400 w-12 h-12 md:w-16 md:h-16" />,
     title: "Learn Web3 Security",
     description: "Access guides and resources to boost your knowledge and stay safe in the Web3 ecosystem.",
-    href: "/learn",
+    href: "/tools/learn",
     button: "Start Learning",
     image: "/images/tools/learn.png"
   },
