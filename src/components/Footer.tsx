@@ -6,7 +6,7 @@ import { Github, Twitter, BookOpen } from "lucide-react";
 const Footer: React.FC = () => {
   return (
     <footer className="w-full bg-transparent pb-10 pt-16">
-      <GlassCard className="max-w-screen-xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10 px-8 py-10 md:py-8 shadow-2xl border-white/15">
+      <GlassCard className="max-w-screen-xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10 px-8 py-10 md:py-8 shadow-2xl border-white/15 rounded-none md:rounded-2xl">
         {/* Left: Links */}
         <div className="flex flex-col md:flex-row items-center gap-6 md:gap-12">
           <a

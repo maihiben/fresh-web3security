@@ -18,7 +18,7 @@ const Header: React.FC = () => {
   return (
     <header className="w-full z-40 fixed top-0 left-0 bg-transparent">
       <LiveActivityNotice />
-      <GlassCard className="max-w-screen-xl mx-auto mt-6 flex items-center justify-between px-6 py-4 md:py-5 md:px-12 shadow-2xl backdrop-blur-2xl border-white/15">
+      <GlassCard className="max-w-screen-xl mx-auto mt-6 flex items-center justify-between px-6 py-4 md:py-5 md:px-12 shadow-2xl backdrop-blur-2xl border-white/15 rounded-none md:rounded-2xl">
         {/* Logo */}
         <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-2xl md:text-3xl tracking-widest uppercase drop-shadow-lg select-none">
           <span className="font-orbitron">Web3<span className="text-lime-400">Security</span></span>
