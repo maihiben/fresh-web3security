@@ -23,7 +23,7 @@ const HeroSection: React.FC = () => {
           </p>
         </div>
         <motion.a
-          href="#tools"
+          href="/tools"
           whileHover={{ scale: 1.08, rotate: -2 }}
           className="inline-block px-6 py-2 md:px-10 md:py-4 rounded-xl bg-lime-400 text-black font-extrabold text-base md:text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] tracking-wider uppercase border-4 border-lime-400 hover:border-cyan-400"
         >
