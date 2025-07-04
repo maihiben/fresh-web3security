@@ -34,10 +34,10 @@ const features = [
 const FeaturesGrid: React.FC = () => {
   return (
     <section id="tools" className="relative z-10 max-w-screen-xl mx-auto px-4 md:px-12 lg:px-24 py-20">
-      <h2 className="font-orbitron text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-white text-center mb-14 drop-shadow-lg">
+      <h2 className="font-orbitron text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-white text-center mb-16 drop-shadow-lg">
         Explore Our Security Tools
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 md:gap-16">
         {features.map((feature) => (
           <FeatureCard key={feature.title} {...feature} />
         ))}

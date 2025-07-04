@@ -13,7 +13,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) =
   return (
     <motion.div
       whileHover={{ scale: 1.08, boxShadow: "0 0 32px #39FF14, 0 0 8px #00FFFF" }}
-      transition={{ type: "spring", stiffness: 260, damping: 18 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className="h-full"
     >
       <GlassCard className="flex flex-col items-center text-center h-full min-h-[260px] group cursor-pointer hover:ring-lime-400/80 p-8 md:p-10 shadow-2xl">
