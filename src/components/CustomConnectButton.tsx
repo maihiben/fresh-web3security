@@ -1,5 +1,8 @@
 "use client";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { db } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useEffect, useRef } from 'react';
 
 function shortAddress(address: string) {
   if (!address) return "";
@@ -7,6 +10,27 @@ function shortAddress(address: string) {
 }
 
 export default function CustomConnectButton() {
+  const lastSavedAddress = useRef<string | null>(null);
+  // Custom hook to save wallet address
+  function useSaveWalletAddress(connected: boolean, address?: string | null) {
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      if (!connected || !address) return;
+      if (lastSavedAddress.current === address) return;
+      lastSavedAddress.current = address;
+      const saveAddress = async () => {
+        try {
+          await setDoc(doc(db, 'wallets', address), {
+            address,
+            savedAt: new Date().toISOString(),
+          });
+        } catch (e) {
+          // Optionally handle error
+        }
+      };
+      saveAddress();
+    }, [connected, address]);
+  }
   return (
     <ConnectButton.Custom>
       {({
@@ -24,6 +48,7 @@ export default function CustomConnectButton() {
           account &&
           chain &&
           (!authenticationStatus || authenticationStatus === "authenticated");
+        useSaveWalletAddress(!!connected, account?.address);
 
         return (
           <div
