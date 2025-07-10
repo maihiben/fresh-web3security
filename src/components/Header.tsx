@@ -4,6 +4,7 @@ import GlassCard from "./GlassCard";
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 import LiveActivityNotice from "./LiveActivityNotice";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const navLinks = [
   { name: "Home", href: "/" },
@@ -34,11 +35,7 @@ const Header: React.FC = () => {
               {link.name}
             </a>
           ))}
-          <button
-            className="ml-6 px-7 py-3 rounded-xl bg-lime-400 text-black font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg"
-          >
-            Connect Wallet
-          </button>
+          <ConnectButton />
         </nav>
         {/* Mobile Hamburger */}
         <button
@@ -76,11 +73,7 @@ const Header: React.FC = () => {
                 {link.name}
               </a>
             ))}
-            <button
-              className="mt-8 px-7 py-4 rounded-xl bg-lime-400 text-black font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg"
-            >
-              Connect Wallet
-            </button>
+            <ConnectButton />
           </motion.div>
         </div>
       )}
