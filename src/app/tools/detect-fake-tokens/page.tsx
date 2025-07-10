@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import GlassCard from "../../../components/GlassCard";
 import { ShieldAlert, Wallet, AlertTriangle, LogIn, CheckCircle, ShieldX, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const steps = [
   {
@@ -26,6 +27,7 @@ export default function DetectFakeTokensPage() {
   const [token, setToken] = useState("");
   const [detecting, setDetecting] = useState(false);
   const [result, setResult] = useState<null | { risks: number; message: string; status: "safe" | "fake" }>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleDetect = () => {
     setDetecting(true);
@@ -120,51 +122,108 @@ export default function DetectFakeTokensPage() {
       <section id="detect-section" className="w-full max-w-screen-md mx-auto px-4 md:px-0 scroll-mt-24">
         <GlassCard className="flex flex-col items-center gap-10 py-12 px-4 md:px-16 relative overflow-hidden bg-gradient-to-br from-lime-900/30 via-[#181F2B]/40 to-[#0D0D0D]/80 border-2 border-lime-400/10 shadow-2xl backdrop-blur-xl">
           {/* Connect Wallet Button */}
-          <motion.button
-            whileHover={{ scale: 1.06, boxShadow: "0 0 32px #39ff1499, 0 0 8px #39ff1499" }}
-            whileTap={{ scale: 0.98 }}
-            className="group flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-2xl bg-lime-400/20 border border-lime-400/40 text-lime-100 font-extrabold text-lg md:text-2xl shadow-lime-400/40 shadow-lg hover:bg-lime-400/40 hover:text-white hover:shadow-lime-400/80 transition-all duration-300 ease-in-out backdrop-blur-lg ring-2 ring-lime-400/30 focus:outline-none focus:ring-4 focus:ring-lime-400/60 tracking-wider mb-2 neon-glow relative animate-pulse-slow"
-            style={{
-              WebkitBackdropFilter: "blur(12px)",
-              backdropFilter: "blur(12px)"
+          <ConnectButton.Custom>
+            {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
+              const ready = mounted && authenticationStatus !== "loading";
+              const connected =
+                ready &&
+                account &&
+                chain &&
+                (!authenticationStatus || authenticationStatus === "authenticated");
+              if (isConnected !== !!connected) setIsConnected(!!connected);
+              if (!connected) {
+                // Show custom connect button (as before)
+                return (
+                  <motion.button
+                    whileHover={{ scale: 1.06, boxShadow: "0 0 32px #39ff1499, 0 0 8px #39ff1499" }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-2xl bg-lime-400/20 border border-lime-400/40 text-lime-100 font-extrabold text-lg md:text-2xl shadow-lime-400/40 shadow-lg hover:bg-lime-400/40 hover:text-white hover:shadow-lime-400/80 transition-all duration-300 ease-in-out backdrop-blur-lg ring-2 ring-lime-400/30 focus:outline-none focus:ring-4 focus:ring-lime-400/60 tracking-wider mb-2 neon-glow relative animate-pulse-slow"
+                    style={{
+                      WebkitBackdropFilter: "blur(12px)",
+                      backdropFilter: "blur(12px)"
+                    }}
+                    onClick={openConnectModal}
+                  >
+                    <Wallet className="w-6 h-6 md:w-8 md:h-8 text-lime-200 group-hover:text-white transition" />
+                    <span className="block md:hidden">Connect</span>
+                    <span className="hidden md:block">Connect Wallet</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 animate-shine bg-gradient-to-r from-transparent via-white/60 to-transparent w-12 h-8 rounded-full opacity-0 group-hover:opacity-80 transition-all duration-500" />
+                  </motion.button>
+                );
+              }
+              // Show both chain and account buttons, styled for this tool
+              return (
+                <div className="flex flex-col items-center gap-2 mb-2">
+                  <motion.button
+                    whileHover={{ scale: 1.06, boxShadow: "0 0 24px #39ff1499" }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-lime-400/20 border border-lime-400/40 text-lime-200 font-bold text-base shadow-lime-400/30 shadow-md hover:bg-lime-400/40 hover:text-white hover:shadow-lime-400/60 transition-all duration-200 ease-in-out backdrop-blur-md ring-1 ring-lime-400/40 focus:outline-none focus:ring-2 focus:ring-lime-400 tracking-wide neon-glow"
+                    style={{ WebkitBackdropFilter: "blur(8px)", backdropFilter: "blur(8px)" }}
+                    onClick={openChainModal}
+                  >
+                    <span className="w-2 h-2 rounded-full mr-2" style={{ background: chain?.iconBackground, display: 'inline-block' }} />
+                    {chain?.iconUrl && (
+                      <img alt={chain.name ?? 'Chain icon'} src={chain.iconUrl} className="w-5 h-5 rounded-full mr-1" />
+                    )}
+                    <span className="hidden md:inline">{chain?.name}</span>
+                    <span className="inline md:hidden">{chain?.name?.slice(0, 8)}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.06, boxShadow: "0 0 24px #39ff1499" }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-3 px-8 py-3 w-full max-w-xs md:max-w-md rounded-2xl bg-lime-400/20 border border-lime-400/40 text-lime-200 font-extrabold text-lg shadow-lime-400/30 shadow-md hover:bg-lime-400/40 hover:text-white hover:shadow-lime-400/60 transition-all duration-200 ease-in-out backdrop-blur-md ring-1 ring-lime-400/40 focus:outline-none focus:ring-2 focus:ring-lime-400 tracking-wide neon-glow font-mono"
+                    style={{ WebkitBackdropFilter: "blur(8px)", backdropFilter: "blur(8px)" }}
+                    onClick={openAccountModal}
+                  >
+                    <Wallet className="w-5 h-5 text-lime-300" />
+                    <span className="truncate w-full text-left">
+                      <span className="hidden md:inline">{account?.address}</span>
+                      <span className="inline md:hidden">
+                        {account?.address
+                          ? `${account.address.slice(0, 8)}…${account.address.slice(-6)}`
+                          : ''}
+                      </span>
+                    </span>
+                  </motion.button>
+                </div>
+              );
             }}
+          </ConnectButton.Custom>
+
+          {/* Divider with OR badge, label, and input: only show when not connected */}
+          {!isConnected && (
+            <>
+              <div className="flex items-center w-full max-w-md my-2">
+                <div className="flex-1 h-px bg-lime-400/20" />
+                <span className="mx-4 px-3 py-1 rounded-full bg-lime-400/10 border border-lime-400/30 text-lime-200 font-bold text-xs uppercase tracking-widest shadow-lime-400/10 shadow-sm backdrop-blur-md">
+                  or
+                </span>
+                <div className="flex-1 h-px bg-lime-400/20" />
+              </div>
+              <label htmlFor="token" className="text-gray-400 text-sm mb-1">
+                Enter token contract address:
+              </label>
+              <input
+                id="token"
+                type="text"
+                placeholder="0x..."
+                value={token}
+                onChange={e => setToken(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-lime-400/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 transition-all mb-2 font-mono text-lg shadow-inner"
+                autoComplete="off"
+              />
+            </>
+          )}
+          {/* Detect Button: always visible */}
+          <motion.button
+            onClick={handleDetect}
+            disabled={(!isConnected && !token) || detecting}
+            whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
+            whileTap={{ scale: 0.97 }}
+            className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast mt-2"
           >
-            <Wallet className="w-6 h-6 md:w-8 md:h-8 text-lime-200 group-hover:text-white transition" />
-            Connect Wallet
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 animate-shine bg-gradient-to-r from-transparent via-white/60 to-transparent w-12 h-8 rounded-full opacity-0 group-hover:opacity-80 transition-all duration-500" />
+            {detecting ? "Detecting..." : "Detect"}
           </motion.button>
-          {/* Divider with OR badge */}
-          <div className="flex items-center w-full max-w-md my-2">
-            <div className="flex-1 h-px bg-lime-400/20" />
-            <span className="mx-4 px-3 py-1 rounded-full bg-lime-400/10 border border-lime-400/30 text-lime-200 font-bold text-xs uppercase tracking-widest shadow-lime-400/10 shadow-sm backdrop-blur-md">
-              or
-            </span>
-            <div className="flex-1 h-px bg-lime-400/20" />
-          </div>
-          {/* Token Input + Detect */}
-          <div className="flex flex-col items-center w-full max-w-md gap-2">
-            <label htmlFor="token" className="text-gray-400 text-sm mb-1">
-              Enter token contract address:
-            </label>
-            <input
-              id="token"
-              type="text"
-              placeholder="0x..."
-              value={token}
-              onChange={e => setToken(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-lime-400/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 transition-all mb-2 font-mono text-lg shadow-inner"
-              autoComplete="off"
-            />
-            <motion.button
-              onClick={handleDetect}
-              disabled={!token || detecting}
-              whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast"
-            >
-              {detecting ? "Detecting..." : "Detect"}
-            </motion.button>
-          </div>
           {/* Results Placeholder */}
           {result && (
             <div className="flex flex-col items-center gap-2 mt-4">

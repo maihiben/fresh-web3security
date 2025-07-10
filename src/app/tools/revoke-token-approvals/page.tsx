@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import GlassCard from "../../../components/GlassCard";
 import { Ban, Wallet, ShieldCheck, AlertTriangle, LogIn, CheckCircle, ShieldX, Undo2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const steps = [
   {
@@ -26,6 +27,7 @@ export default function RevokeTokenApprovalsPage() {
   const [address, setAddress] = useState("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<null | { risks: number; message: string; status: "secure" | "risky" }>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleScan = () => {
     setScanning(true);
@@ -120,51 +122,108 @@ export default function RevokeTokenApprovalsPage() {
       <section id="revoke-section" className="w-full max-w-screen-md mx-auto px-4 md:px-0 scroll-mt-24">
         <GlassCard className="flex flex-col items-center gap-10 py-12 px-4 md:px-16 relative overflow-hidden bg-gradient-to-br from-pink-900/30 via-[#181F2B]/40 to-[#0D0D0D]/80 border-2 border-pink-500/10 shadow-2xl backdrop-blur-xl">
           {/* Connect Wallet Button */}
-          <motion.button
-            whileHover={{ scale: 1.06, boxShadow: "0 0 32px #ff4fa199, 0 0 8px #ff4fa199" }}
-            whileTap={{ scale: 0.98 }}
-            className="group flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-2xl bg-pink-500/20 border border-pink-500/40 text-pink-100 font-extrabold text-lg md:text-2xl shadow-pink-500/40 shadow-lg hover:bg-pink-500/40 hover:text-white hover:shadow-pink-500/80 transition-all duration-300 ease-in-out backdrop-blur-lg ring-2 ring-pink-500/30 focus:outline-none focus:ring-4 focus:ring-pink-500/60 tracking-wider mb-2 neon-glow relative animate-pulse-slow"
-            style={{
-              WebkitBackdropFilter: "blur(12px)",
-              backdropFilter: "blur(12px)"
+          <ConnectButton.Custom>
+            {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
+              const ready = mounted && authenticationStatus !== "loading";
+              const connected =
+                ready &&
+                account &&
+                chain &&
+                (!authenticationStatus || authenticationStatus === "authenticated");
+              if (isConnected !== !!connected) setIsConnected(!!connected);
+              if (!connected) {
+                // Show custom connect button (as before)
+                return (
+                  <motion.button
+                    whileHover={{ scale: 1.06, boxShadow: "0 0 32px #ff4fa199, 0 0 8px #ff4fa199" }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-2xl bg-pink-500/20 border border-pink-500/40 text-pink-100 font-extrabold text-lg md:text-2xl shadow-pink-500/40 shadow-lg hover:bg-pink-500/40 hover:text-white hover:shadow-pink-500/80 transition-all duration-300 ease-in-out backdrop-blur-lg ring-2 ring-pink-500/30 focus:outline-none focus:ring-4 focus:ring-pink-500/60 tracking-wider mb-2 neon-glow relative animate-pulse-slow"
+                    style={{
+                      WebkitBackdropFilter: "blur(12px)",
+                      backdropFilter: "blur(12px)"
+                    }}
+                    onClick={openConnectModal}
+                  >
+                    <Wallet className="w-6 h-6 md:w-8 md:h-8 text-pink-200 group-hover:text-white transition" />
+                    <span className="block md:hidden">Connect</span>
+                    <span className="hidden md:block">Connect Wallet</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 animate-shine bg-gradient-to-r from-transparent via-white/60 to-transparent w-12 h-8 rounded-full opacity-0 group-hover:opacity-80 transition-all duration-500" />
+                  </motion.button>
+                );
+              }
+              // Show both chain and account buttons, styled for this tool
+              return (
+                <div className="flex flex-col items-center gap-2 mb-2">
+                  <motion.button
+                    whileHover={{ scale: 1.06, boxShadow: "0 0 24px #ff4fa199" }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-500/20 border border-pink-500/40 text-pink-200 font-bold text-base shadow-pink-500/30 shadow-md hover:bg-pink-500/40 hover:text-white hover:shadow-pink-500/60 transition-all duration-200 ease-in-out backdrop-blur-md ring-1 ring-pink-500/40 focus:outline-none focus:ring-2 focus:ring-pink-500 tracking-wide neon-glow"
+                    style={{ WebkitBackdropFilter: "blur(8px)", backdropFilter: "blur(8px)" }}
+                    onClick={openChainModal}
+                  >
+                    <span className="w-2 h-2 rounded-full mr-2" style={{ background: chain?.iconBackground, display: 'inline-block' }} />
+                    {chain?.iconUrl && (
+                      <img alt={chain.name ?? 'Chain icon'} src={chain.iconUrl} className="w-5 h-5 rounded-full mr-1" />
+                    )}
+                    <span className="hidden md:inline">{chain?.name}</span>
+                    <span className="inline md:hidden">{chain?.name?.slice(0, 8)}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.06, boxShadow: "0 0 24px #ff4fa199" }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-3 px-8 py-3 w-full max-w-xs md:max-w-md rounded-2xl bg-pink-500/20 border border-pink-500/40 text-pink-200 font-extrabold text-lg shadow-pink-500/30 shadow-md hover:bg-pink-500/40 hover:text-white hover:shadow-pink-500/60 transition-all duration-200 ease-in-out backdrop-blur-md ring-1 ring-pink-500/40 focus:outline-none focus:ring-2 focus:ring-pink-500 tracking-wide neon-glow font-mono"
+                    style={{ WebkitBackdropFilter: "blur(8px)", backdropFilter: "blur(8px)" }}
+                    onClick={openAccountModal}
+                  >
+                    <Wallet className="w-5 h-5 text-pink-300" />
+                    <span className="truncate w-full text-left">
+                      <span className="hidden md:inline">{account?.address}</span>
+                      <span className="inline md:hidden">
+                        {account?.address
+                          ? `${account.address.slice(0, 8)}…${account.address.slice(-6)}`
+                          : ''}
+                      </span>
+                    </span>
+                  </motion.button>
+                </div>
+              );
             }}
+          </ConnectButton.Custom>
+
+          {/* Divider with OR badge, label, and input: only show when not connected */}
+          {!isConnected && (
+            <>
+              <div className="flex items-center w-full max-w-md my-2">
+                <div className="flex-1 h-px bg-pink-500/20" />
+                <span className="mx-4 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-200 font-bold text-xs uppercase tracking-widest shadow-pink-500/10 shadow-sm backdrop-blur-md">
+                  or
+                </span>
+                <div className="flex-1 h-px bg-pink-500/20" />
+              </div>
+              <label htmlFor="address" className="text-gray-400 text-sm mb-1">
+                Enter a wallet address:
+              </label>
+              <input
+                id="address"
+                type="text"
+                placeholder="0x..."
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-pink-500/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all mb-2 font-mono text-lg shadow-inner"
+                autoComplete="off"
+              />
+            </>
+          )}
+          {/* Scan Approvals Button: always visible */}
+          <motion.button
+            onClick={handleScan}
+            disabled={(!isConnected && !address) || scanning}
+            whileHover={{ scale: 1.05, boxShadow: "0 0 24px #ff4fa1cc" }}
+            whileTap={{ scale: 0.97 }}
+            className="inline-block px-10 py-4 rounded-2xl bg-pink-500 text-white font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast mt-2"
           >
-            <Wallet className="w-6 h-6 md:w-8 md:h-8 text-pink-200 group-hover:text-white transition" />
-            Connect Wallet
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 animate-shine bg-gradient-to-r from-transparent via-white/60 to-transparent w-12 h-8 rounded-full opacity-0 group-hover:opacity-80 transition-all duration-500" />
+            {scanning ? "Scanning..." : "Scan Approvals"}
           </motion.button>
-          {/* Divider with OR badge */}
-          <div className="flex items-center w-full max-w-md my-2">
-            <div className="flex-1 h-px bg-pink-500/20" />
-            <span className="mx-4 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-200 font-bold text-xs uppercase tracking-widest shadow-pink-500/10 shadow-sm backdrop-blur-md">
-              or
-            </span>
-            <div className="flex-1 h-px bg-pink-500/20" />
-          </div>
-          {/* Address Input + Scan */}
-          <div className="flex flex-col items-center w-full max-w-md gap-2">
-            <label htmlFor="address" className="text-gray-400 text-sm mb-1">
-              Enter a wallet address:
-            </label>
-            <input
-              id="address"
-              type="text"
-              placeholder="0x..."
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-pink-500/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all mb-2 font-mono text-lg shadow-inner"
-              autoComplete="off"
-            />
-            <motion.button
-              onClick={handleScan}
-              disabled={!address || scanning}
-              whileHover={{ scale: 1.05, boxShadow: "0 0 24px #ff4fa1cc" }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-block px-10 py-4 rounded-2xl bg-pink-500 text-white font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast"
-            >
-              {scanning ? "Scanning..." : "Scan Approvals"}
-            </motion.button>
-          </div>
           {/* Results Placeholder */}
           {result && (
             <div className="flex flex-col items-center gap-2 mt-4">
