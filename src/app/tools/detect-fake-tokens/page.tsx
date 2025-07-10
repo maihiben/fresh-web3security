@@ -27,13 +27,14 @@ const steps = [
 export default function DetectFakeTokensPage() {
   const [token, setToken] = useState("");
   const [detecting, setDetecting] = useState(false);
-  const [result, setResult] = useState<null | { risks: number; message: string; status: "safe" | "fake" }>(null);
+  const [result, setResult] = useState<null | any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [detectedWallet, setDetectedWallet] = useState<string | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Validate token address on change
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,15 +61,9 @@ export default function DetectFakeTokensPage() {
         body: JSON.stringify({ token, chainId }),
       });
       const data = await res.json();
-      if (data.status === 'fake') {
-        setResult({ risks: 1, message: data.message, status: 'fake' });
-      } else if (data.status === 'safe') {
-        setResult({ risks: 0, message: data.message, status: 'safe' });
-      } else {
-        setResult({ risks: 1, message: 'Unable to analyze token. Please check the address.', status: 'fake' });
-      }
+      setResult(data);
     } catch (e) {
-      setResult({ risks: 1, message: 'Error analyzing token. Please try again.', status: 'fake' });
+      setResult({ status: 'fake', message: 'Error analyzing token. Please try again.' });
     }
     setDetecting(false);
   };
@@ -284,13 +279,76 @@ export default function DetectFakeTokensPage() {
           )}
           {/* Results Placeholder */}
           {result && (
-            <div className="flex flex-col items-center gap-2 mt-4">
+            <div className="flex flex-col items-center gap-2 mt-4 w-full max-w-xl mx-auto">
               {result.status === "safe" ? (
                 <CheckCircle className="w-10 h-10 text-lime-400" />
               ) : (
                 <ShieldX className="w-10 h-10 text-pink-500" />
               )}
               <span className={`text-lg md:text-xl font-bold ${result.status === "safe" ? "text-lime-400" : "text-pink-400"} text-center w-full`}>{result.message}</span>
+              {/* Risk Level */}
+              {result.riskLevel && (
+                <span className="text-base font-semibold text-gray-300 text-center w-full">Risk Level: <span className="font-bold text-white">{result.riskLevel}</span></span>
+              )}
+              {/* Token Details */}
+              {result.token ? (
+                <div className="w-full bg-black/30 rounded-xl p-4 mt-2 text-white text-sm font-mono border border-lime-400/20 shadow-inner">
+                  <div><span className="font-bold text-lime-400">Token:</span> {result.token.name} ({result.token.symbol})</div>
+                  <div><span className="font-bold text-lime-400">Address:</span> <span className="truncate inline-block max-w-[160px] align-middle" title={result.token.address}>{result.token.address.slice(0, 6)}...{result.token.address.slice(-4)}</span></div>
+                  {result.token.decimals !== undefined && <div><span className="font-bold text-lime-400">Decimals:</span> {result.token.decimals}</div>}
+                  {result.token.totalHolders !== undefined && <div><span className="font-bold text-lime-400">Holders:</span> {result.token.totalHolders}</div>}
+                </div>
+              ) : (
+                <div className="w-full bg-black/30 rounded-xl p-4 mt-2 text-gray-400 text-sm font-mono border border-lime-400/20 shadow-inner text-center">
+                  Token details not available. This may be a new or unlisted token. You can see the technical details below
+                </div>
+              )}
+              {/* Flags/Warnings */}
+              {result.flags && result.flags.length > 0 && (
+                <div className="w-full bg-yellow-900/30 rounded-xl p-4 mt-2 text-yellow-200 text-sm font-mono border border-yellow-400/20 shadow-inner">
+                  <div className="font-bold text-yellow-300 mb-1">Warnings / Flags:</div>
+                  <ul className="list-disc ml-6">
+                    {result.flags.map((flag: any, idx: number) => (
+                      <li key={idx}>{typeof flag === 'string' ? flag : (flag.description || flag.flag || JSON.stringify(flag))}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* Technical Details (collapsible) */}
+              <details className="w-full mt-2 bg-gray-900/60 rounded-xl p-4 text-gray-200 text-xs font-mono border border-gray-700/40 shadow-inner">
+                <summary className="cursor-pointer font-bold text-cyan-300">Technical Details</summary>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-xs">Raw engine data</span>
+                  <button
+                    className="px-3 py-1 rounded bg-cyan-700 text-white text-xs font-bold hover:bg-cyan-500 transition ml-2"
+                    onClick={() => {
+                      const text = JSON.stringify(result.details, null, 2);
+                      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1200);
+                      } else {
+                        // Fallback for older browsers
+                        try {
+                          const textarea = document.createElement('textarea');
+                          textarea.value = text;
+                          document.body.appendChild(textarea);
+                          textarea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textarea);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1200);
+                        } catch (err) {
+                          alert('Copy to clipboard is not supported in this environment.');
+                        }
+                      }
+                    }}
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <pre className="whitespace-pre-wrap break-all">{JSON.stringify(result.details, null, 2)}</pre>
+              </details>
               {result.status === "fake" && (
                 <button
                   className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2"

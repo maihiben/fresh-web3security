@@ -31,32 +31,85 @@ export async function POST(req: NextRequest) {
     } catch (e) {}
 
     // honeypot.is v2 GET API call
+    let honeypotData = null;
     let honeypotResult = null;
     let honeypotSummary = null;
+    let honeypotToken = null;
+    let honeypotFlags = null;
     try {
       const hpRes = await fetch(`https://api.honeypot.is/v2/IsHoneypot?address=${token}&chainID=${chainId}`);
       if (hpRes.ok) {
-        const hpData = await hpRes.json();
-        honeypotResult = hpData.honeypotResult;
-        honeypotSummary = hpData.summary;
+        honeypotData = await hpRes.json();
+        honeypotResult = honeypotData.honeypotResult;
+        honeypotSummary = honeypotData.summary;
+        honeypotToken = honeypotData.token;
+        honeypotFlags = honeypotData.summary?.flags || honeypotData.flags || [];
       }
     } catch (e) {}
 
-    // Decision logic
+    // Sophisticated risk messaging
     // 1. If GoPlus flags as honeypot/scam
     if (goPlusResult && (goPlusResult.is_honeypot === '1' || goPlusResult.scam === '1')) {
-      return NextResponse.json({ status: 'fake', message: `${ENGINE_NAME}: Fake token detected! Remove immediately.`, engine: ENGINE_NAME });
+      return NextResponse.json({
+        status: 'fake',
+        message: `${ENGINE_NAME}: High risk! This token is flagged as a scam or honeypot.`,
+        riskLevel: 'high',
+        details: {
+          threatEnginePrimary: goPlusResult,
+          threatEngineSecondary: honeypotData,
+        },
+        token: honeypotToken,
+        flags: honeypotFlags,
+        engine: ENGINE_NAME,
+      });
     }
     // 2. If honeypot.is v2 flags as honeypot (summary.risk === 'honeypot' or honeypotResult.isHoneypot === true)
     if ((honeypotSummary && honeypotSummary.risk === 'honeypot') || (honeypotResult && honeypotResult.isHoneypot === true)) {
-      return NextResponse.json({ status: 'fake', message: `${ENGINE_NAME}: Fake token detected! Remove immediately.`, engine: ENGINE_NAME });
+      return NextResponse.json({
+        status: 'fake',
+        message: `${ENGINE_NAME}: Honeypot detected! This token is almost certainly a scam.`,
+        riskLevel: 'honeypot',
+        details: {
+          threatEnginePrimary: goPlusResult,
+          threatEngineSecondary: honeypotData,
+        },
+        token: honeypotToken,
+        flags: honeypotFlags,
+        engine: ENGINE_NAME,
+      });
     }
     // 3. If either has data and both say safe
     if (goPlusResult || honeypotResult) {
-      return NextResponse.json({ status: 'safe', message: `${ENGINE_NAME}: Token is safe. No scam detected!`, engine: ENGINE_NAME });
+      let riskMsg = `${ENGINE_NAME}: Token is safe. No scam detected!`;
+      let riskLevel = 'low';
+      if (honeypotSummary && honeypotSummary.risk && honeypotSummary.risk !== 'very_low' && honeypotSummary.risk !== 'low') {
+        riskMsg = `${ENGINE_NAME}: Caution! Token risk level: ${honeypotSummary.risk}`;
+        riskLevel = honeypotSummary.risk;
+      }
+      return NextResponse.json({
+        status: 'safe',
+        message: riskMsg,
+        riskLevel,
+        details: {
+          threatEnginePrimary: goPlusResult,
+          threatEngineSecondary: honeypotData,
+        },
+        token: honeypotToken,
+        flags: honeypotFlags,
+        engine: ENGINE_NAME,
+      });
     }
     // 4. If both have no data
-    return NextResponse.json({ status: 'fake', message: `${ENGINE_NAME}: Unable to analyze token on this chain. No data available.`, engine: ENGINE_NAME }, { status: 400 });
+    return NextResponse.json({
+      status: 'fake',
+      message: `${ENGINE_NAME}: Unable to analyze token on this chain. No data available.`,
+      riskLevel: 'unknown',
+      details: {
+        threatEnginePrimary: goPlusResult,
+        threatEngineSecondary: honeypotData,
+      },
+      engine: ENGINE_NAME,
+    }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ status: 'fake', message: 'Error analyzing token.' }, { status: 500 });
   }
