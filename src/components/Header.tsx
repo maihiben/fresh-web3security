@@ -69,13 +69,13 @@ const Header: React.FC = () => {
           {/* Render the rest of the navLinks except Home (0) and Tools (handled above) */}
           {navLinks.slice(1).map((link) => (
             link.name !== "Tools" ? (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-white text-lg font-bold uppercase tracking-wider px-2 py-1 hover:text-cyan-400 transition-colors drop-shadow-md"
-              >
-                {link.name}
-              </a>
+            <a
+              key={link.name}
+              href={link.href}
+              className="text-white text-lg font-bold uppercase tracking-wider px-2 py-1 hover:text-cyan-400 transition-colors drop-shadow-md"
+            >
+              {link.name}
+            </a>
             ) : null
           ))}
           <CustomConnectButton />
@@ -120,20 +120,20 @@ const Header: React.FC = () => {
             {/* Render the rest of the navLinks except Home (0) and Tools (handled above) */}
             {navLinks.slice(1).map((link) => (
               link.name !== "Tools" ? (
-                <a
-                  key={link.name}
-                  href={link.href}
+              <a
+                key={link.name}
+                href={link.href}
                   className="text-white text-xl font-extrabold uppercase tracking-wider px-2 py-4 hover:text-cyan-400 transition-colors drop-shadow-md"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.name}
-                </a>
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.name}
+              </a>
               ) : null
             ))}
             {/* Spacer to push connect button to bottom */}
             <div className="flex-1" />
             <div className="w-full flex-shrink-0">
-              <CustomConnectButton />
+            <CustomConnectButton />
             </div>
           </motion.div>
         </div>
@@ -151,7 +151,7 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header;
+export default Header; 
 
 function MobileToolsMenu() {
   const [open, setOpen] = React.useState(false);

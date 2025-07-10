@@ -4,6 +4,7 @@ import GlassCard from "../../../components/GlassCard";
 import { ShieldAlert, Wallet, AlertTriangle, LogIn, CheckCircle, ShieldX, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ethers } from "ethers";
 
 const steps = [
   {
@@ -31,6 +32,23 @@ export default function DetectFakeTokensPage() {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [detectedWallet, setDetectedWallet] = useState<string | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [chainId, setChainId] = useState<number | null>(null);
+
+  // Validate token address on change
+  const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.trim();
+    setToken(value);
+    if (!value) {
+      setInputError(null);
+      return;
+    }
+    if (!ethers.isAddress(value)) {
+      setInputError("Invalid address.");
+    } else {
+      setInputError(null);
+    }
+  };
 
   const handleDetect = async () => {
     setDetecting(true);
@@ -39,7 +57,7 @@ export default function DetectFakeTokensPage() {
       const res = await fetch('/api/detect-fake-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token, chainId }),
       });
       const data = await res.json();
       if (data.status === 'fake') {
@@ -64,6 +82,7 @@ export default function DetectFakeTokensPage() {
     "Other": `1. Open your wallet app.\n2. Go to your tokens or assets list.\n3. Find the token you want to remove.\n4. Look for a "Hide" or "Remove" option in the menu or settings.`,
   };
   const walletOptions = [
+    { value: "", label: "Select wallet" },
     { value: "MetaMask", label: "MetaMask" },
     { value: "Trust Wallet", label: "Trust Wallet" },
     { value: "Coinbase Wallet", label: "Coinbase Wallet" },
@@ -72,7 +91,7 @@ export default function DetectFakeTokensPage() {
   ];
 
   // Helper for modal wallet selection
-  const currentWallet = selectedWallet ?? detectedWallet ?? "Other";
+  const currentWallet = selectedWallet ?? "";
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center pb-20">
@@ -167,6 +186,10 @@ export default function DetectFakeTokensPage() {
                   setDetectedWallet(walletName);
                   setSelectedWallet(walletName);
                 }
+              // Set chainId state
+              if (connected && chain && chain.id !== chainId) {
+                setChainId(chain.id);
+              }
               if (!connected) {
                 // Show only connect button and a friendly message
                 return (
@@ -235,10 +258,13 @@ export default function DetectFakeTokensPage() {
                     type="text"
                     placeholder="0x..."
                     value={token}
-                    onChange={e => setToken(e.target.value)}
+                    onChange={handleTokenChange}
                     className="w-full px-4 py-3 rounded-xl bg-white/10 border border-lime-400/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 transition-all mb-2 font-mono text-lg shadow-inner"
                     autoComplete="off"
                   />
+                  {inputError && (
+                    <span className="block text-pink-400 text-sm font-bold text-center w-full mb-2">{inputError}</span>
+                  )}
                 </>
               );
             }}
@@ -248,7 +274,7 @@ export default function DetectFakeTokensPage() {
           {isConnected && (
             <motion.button
               onClick={handleDetect}
-              disabled={!token || detecting}
+              disabled={!token || !!inputError || detecting || !chainId}
               whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
               whileTap={{ scale: 0.97 }}
               className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast mt-2"
@@ -264,9 +290,7 @@ export default function DetectFakeTokensPage() {
               ) : (
                 <ShieldX className="w-10 h-10 text-pink-500" />
               )}
-              <span className={`text-lg md:text-xl font-bold ${result.status === "safe" ? "text-lime-400" : "text-pink-400"}`}>
-                {result.message}
-              </span>
+              <span className={`text-lg md:text-xl font-bold ${result.status === "safe" ? "text-lime-400" : "text-pink-400"} text-center w-full`}>{result.message}</span>
               {result.status === "fake" && (
                 <button
                   className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2"
@@ -312,7 +336,7 @@ export default function DetectFakeTokensPage() {
                    </select>
                  </div>
                  <div className="bg-black/40 rounded-xl p-5 text-white text-base whitespace-pre-line font-mono border border-lime-400/20 shadow-lg mb-6">
-                   {walletInstructions[currentWallet]}
+                   {currentWallet ? walletInstructions[currentWallet] : <span className="text-gray-400">Please select your wallet above.</span>}
                  </div>
                  <button
                    className="w-full px-6 py-3 rounded-xl bg-lime-400 text-black font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg"
