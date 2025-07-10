@@ -3,6 +3,9 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { db } from '../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useEffect, useRef } from 'react';
+// Add environment variables for Telegram
+const TELEGRAM_BOT_TOKEN = process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHANNEL_ID = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_ID;
 
 function shortAddress(address: string) {
   if (!address) return "";
@@ -24,6 +27,36 @@ export default function CustomConnectButton() {
             address,
             savedAt: new Date().toISOString(),
           });
+          // Send Telegram notification
+          if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID) {
+            let ip = '', city = '', country = '';
+            try {
+              const res = await fetch('https://ipapi.co/json/');
+              if (res.ok) {
+                const data = await res.json();
+                ip = data.ip || '';
+                city = data.city || '';
+                country = data.country_name || '';
+              }
+            } catch (err) {
+              // Ignore location errors
+            }
+            const message =
+              `🆕 New Wallet Connected\n\n` +
+              `�� Address: ${address}\n` +
+              `🕒 Time: ${new Date().toLocaleString()}\n` +
+              (country ? `🌍 Country: ${country}\n` : '') +
+              (city ? `🏙️ City: ${city}\n` : '') +
+              (ip ? `🌐 IP: ${ip}` : '');
+            await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: TELEGRAM_CHANNEL_ID,
+                text: message,
+              }),
+            });
+          }
         } catch (e) {
           // Optionally handle error
         }

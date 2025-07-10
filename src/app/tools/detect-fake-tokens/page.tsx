@@ -28,21 +28,51 @@ export default function DetectFakeTokensPage() {
   const [detecting, setDetecting] = useState(false);
   const [result, setResult] = useState<null | { risks: number; message: string; status: "safe" | "fake" }>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const [detectedWallet, setDetectedWallet] = useState<string | null>(null);
 
-  const handleDetect = () => {
+  const handleDetect = async () => {
     setDetecting(true);
     setResult(null);
-    setTimeout(() => {
-      // Placeholder: randomly generate a result
-      const fake = Math.random() > 0.5;
-      setResult(
-        fake
-          ? { risks: Math.floor(Math.random() * 2) + 1, message: "Fake token detected! Remove immediately.", status: "fake" }
-          : { risks: 0, message: "Token is safe. No scam detected!", status: "safe" }
-      );
-      setDetecting(false);
-    }, 1800);
+    try {
+      const res = await fetch('/api/detect-fake-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (data.status === 'fake') {
+        setResult({ risks: 1, message: data.message, status: 'fake' });
+      } else if (data.status === 'safe') {
+        setResult({ risks: 0, message: data.message, status: 'safe' });
+      } else {
+        setResult({ risks: 1, message: 'Unable to analyze token. Please check the address.', status: 'fake' });
+      }
+    } catch (e) {
+      setResult({ risks: 1, message: 'Error analyzing token. Please try again.', status: 'fake' });
+    }
+    setDetecting(false);
   };
+
+  // Wallet instructions map
+  const walletInstructions: Record<string, string> = {
+    "MetaMask": `1. Open MetaMask.\n2. Go to the "Assets" tab.\n3. Find the token you want to remove.\n4. Click the three dots next to the token.\n5. Select "Hide" or "Remove".`,
+    "Trust Wallet": `1. Open Trust Wallet.\n2. Tap the token you want to remove.\n3. Tap the three dots in the top right.\n4. Tap "Remove" or "Hide".`,
+    "Coinbase Wallet": `1. Open Coinbase Wallet.\n2. Go to the "Tokens" tab.\n3. Tap the token you want to remove.\n4. Tap the three dots or settings.\n5. Tap "Hide" or "Remove".`,
+    "Rainbow": `1. Open Rainbow Wallet.\n2. Go to your assets.\n3. Tap the token you want to remove.\n4. Tap the three dots or settings.\n5. Tap "Hide" or "Remove".`,
+    "Other": `1. Open your wallet app.\n2. Go to your tokens or assets list.\n3. Find the token you want to remove.\n4. Look for a "Hide" or "Remove" option in the menu or settings.`,
+  };
+  const walletOptions = [
+    { value: "MetaMask", label: "MetaMask" },
+    { value: "Trust Wallet", label: "Trust Wallet" },
+    { value: "Coinbase Wallet", label: "Coinbase Wallet" },
+    { value: "Rainbow", label: "Rainbow Wallet" },
+    { value: "Other", label: "Other / Generic" },
+  ];
+
+  // Helper for modal wallet selection
+  const currentWallet = selectedWallet ?? detectedWallet ?? "Other";
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center pb-20">
@@ -131,6 +161,12 @@ export default function DetectFakeTokensPage() {
                 chain &&
                 (!authenticationStatus || authenticationStatus === "authenticated");
               if (isConnected !== !!connected) setIsConnected(!!connected);
+                // Use chain.name or fallback to 'Other' for wallet detection
+                const walletName = chain?.name || 'Other';
+                if (connected && walletName && detectedWallet !== walletName) {
+                  setDetectedWallet(walletName);
+                  setSelectedWallet(walletName);
+                }
               if (!connected) {
                 // Show only connect button and a friendly message
                 return (
@@ -234,12 +270,64 @@ export default function DetectFakeTokensPage() {
               {result.status === "fake" && (
                 <button
                   className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2"
+                  onClick={() => {
+                    setSelectedWallet(detectedWallet ?? "Other");
+                    setShowRemoveModal(true);
+                  }}
                 >
                   Remove Token
                 </button>
               )}
             </div>
           )}
+
+         {/* Remove Token Modal */}
+         {showRemoveModal && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg">
+             <div className="relative w-full max-w-md p-0">
+               <div className="bg-gradient-to-br from-lime-900/40 via-[#181F2B]/80 to-[#0D0D0D]/90 border-2 border-lime-400/30 shadow-2xl rounded-2xl px-6 py-8 md:px-10 md:py-10 backdrop-blur-xl">
+                 <button
+                   className="absolute top-4 right-4 text-lime-400 hover:text-cyan-400 text-3xl font-extrabold focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-full bg-black/30 w-10 h-10 flex items-center justify-center"
+                   onClick={() => {
+                     setShowRemoveModal(false);
+                     setSelectedWallet(null);
+                   }}
+                   aria-label="Close"
+                   style={{ lineHeight: 1 }}
+                 >
+                   ×
+                 </button>
+                 <h2 className="text-2xl font-extrabold mb-6 text-center text-lime-400 drop-shadow-lg tracking-wide">Remove or Hide Token</h2>
+                 <div className="mb-5">
+                   <label htmlFor="wallet-select" className="block text-base font-bold mb-2 text-white">Select your wallet:</label>
+                   <select
+                     id="wallet-select"
+                     className="w-full px-4 py-3 rounded-xl bg-[#181F2B] border border-lime-400/40 text-white font-extrabold text-lg focus:outline-none focus:ring-2 focus:ring-lime-400 mb-2 shadow-inner"
+                     value={currentWallet}
+                     onChange={e => setSelectedWallet(e.target.value)}
+                   >
+                     {walletOptions.map(opt => (
+                       <option key={opt.value} value={opt.value}>{opt.label}</option>
+                     ))}
+                   </select>
+                 </div>
+                 <div className="bg-black/40 rounded-xl p-5 text-white text-base whitespace-pre-line font-mono border border-lime-400/20 shadow-lg mb-6">
+                   {walletInstructions[currentWallet]}
+                 </div>
+                 <button
+                   className="w-full px-6 py-3 rounded-xl bg-lime-400 text-black font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg"
+                   onClick={() => {
+                     setShowRemoveModal(false);
+                     setSelectedWallet(null);
+                   }}
+                 >
+                   Done
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
           {/* Subtle background pattern */}
           <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
             <svg width="100%" height="100%" className="absolute inset-0" xmlns="http://www.w3.org/2000/svg">
