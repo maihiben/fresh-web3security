@@ -362,68 +362,54 @@ export default function DetectFakeTokensPage() {
               )}
             </div>
           )}
-
-         {/* Remove Token Modal */}
-         {showRemoveModal && (
-           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg">
-             <div className="relative w-full max-w-md p-0">
-               <div className="bg-gradient-to-br from-lime-900/40 via-[#181F2B]/80 to-[#0D0D0D]/90 border-2 border-lime-400/30 shadow-2xl rounded-2xl px-6 py-8 md:px-10 md:py-10 backdrop-blur-xl">
-                 <button
-                   className="absolute top-4 right-4 text-lime-400 hover:text-cyan-400 text-3xl font-extrabold focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-full bg-black/30 w-10 h-10 flex items-center justify-center"
-                   onClick={() => {
-                     setShowRemoveModal(false);
-                     setSelectedWallet(null);
-                   }}
-                   aria-label="Close"
-                   style={{ lineHeight: 1 }}
-                 >
-                   ×
-                 </button>
-                 <h2 className="text-2xl font-extrabold mb-6 text-center text-lime-400 drop-shadow-lg tracking-wide">Remove or Hide Token</h2>
-                 <div className="mb-5">
-                   <label htmlFor="wallet-select" className="block text-base font-bold mb-2 text-white">Select your wallet:</label>
-                   <select
-                     id="wallet-select"
-                     className="w-full px-4 py-3 rounded-xl bg-[#181F2B] border border-lime-400/40 text-white font-extrabold text-lg focus:outline-none focus:ring-2 focus:ring-lime-400 mb-2 shadow-inner"
-                     value={currentWallet}
-                     onChange={e => setSelectedWallet(e.target.value)}
-                   >
-                     {walletOptions.map(opt => (
-                       <option key={opt.value} value={opt.value}>{opt.label}</option>
-                     ))}
-                   </select>
-                 </div>
-                 <div className="bg-black/40 rounded-xl p-5 text-white text-base whitespace-pre-line font-mono border border-lime-400/20 shadow-lg mb-6">
-                   {currentWallet ? walletInstructions[currentWallet] : <span className="text-gray-400">Please select your wallet above.</span>}
-                 </div>
-                 <button
-                   className="w-full px-6 py-3 rounded-xl bg-lime-400 text-black font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg"
-                   onClick={() => {
-                     setShowRemoveModal(false);
-                     setSelectedWallet(null);
-                   }}
-                 >
-                   Done
-                 </button>
-               </div>
-             </div>
-           </div>
-         )}
-
-          {/* Subtle background pattern */}
-          <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
-            <svg width="100%" height="100%" className="absolute inset-0" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <radialGradient id="bg-grad" cx="50%" cy="50%" r="80%">
-                  <stop offset="0%" stopColor="#39ff14" stopOpacity="0.10" />
-                  <stop offset="100%" stopColor="#0D0D0D" stopOpacity="0.0" />
-                </radialGradient>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#bg-grad)" />
-            </svg>
-          </div>
         </GlassCard>
       </section>
+      {/* Remove Token Modal - moved outside main content for true overlay */}
+      {showRemoveModal && (
+        <div className="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-black/70 backdrop-blur-lg">
+          <div className="relative w-full max-w-md p-0">
+            <div className="bg-gradient-to-br from-lime-900/40 via-[#181F2B]/80 to-[#0D0D0D]/90 border-2 border-lime-400/30 shadow-2xl rounded-2xl px-6 py-8 md:px-10 md:py-10 backdrop-blur-xl">
+              <button
+                className="absolute top-4 right-4 text-lime-400 hover:text-cyan-400 text-3xl font-extrabold focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-full bg-black/30 w-10 h-10 flex items-center justify-center z-[100]"
+                style={{ lineHeight: 1, touchAction: 'manipulation' }}
+                onClick={() => {
+                  setShowRemoveModal(false);
+                  setSelectedWallet(null);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+              <h2 className="text-2xl font-extrabold mb-6 text-center text-lime-400 drop-shadow-lg tracking-wide">Remove or Hide Token</h2>
+              <div className="mb-5">
+                <label htmlFor="wallet-select" className="block text-base font-bold mb-2 text-white">Select your wallet:</label>
+                <select
+                  id="wallet-select"
+                  className="w-full px-4 py-3 rounded-xl bg-[#181F2B] border border-lime-400/40 text-white font-extrabold text-lg focus:outline-none focus:ring-2 focus:ring-lime-400 mb-2 shadow-inner"
+                  value={currentWallet}
+                  onChange={e => setSelectedWallet(e.target.value)}
+                >
+                  {walletOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="bg-black/40 rounded-xl p-5 text-white text-base whitespace-pre-line font-mono border border-lime-400/20 shadow-lg mb-6">
+                {currentWallet ? walletInstructions[currentWallet] : <span className="text-gray-400">Please select your wallet above.</span>}
+              </div>
+              <button
+                className="w-full px-6 py-3 rounded-xl bg-lime-400 text-black font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg"
+                onClick={() => {
+                  setShowRemoveModal(false);
+                  setSelectedWallet(null);
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style jsx global>{`
         .neon-glow {
           box-shadow: 0 0 32px #39ff1444, 0 0 8px #39ff1444;
