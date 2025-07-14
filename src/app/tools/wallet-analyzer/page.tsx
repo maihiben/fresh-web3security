@@ -140,8 +140,11 @@ export default function WalletAnalyzerPage() {
   const [safeguardStarted, setSafeguardStarted] = useState(false);
   const [showSafeguardModal, setShowSafeguardModal] = useState(false);
   const [showSafeguardSuccess, setShowSafeguardSuccess] = useState(false);
+  // Add state for summary modal
+  const [showSafeguardSummary, setShowSafeguardSummary] = useState(false);
+  const [safeguardSummary, setSafeguardSummary] = useState<{secured: Array<{symbol: string, contractAddress: string}>, failed: Array<{symbol: string, contractAddress: string, reason: string}>} | null>(null);
 
-  // Auto-close safeguard modal and show success when all tokens are processed
+  // Auto-close safeguard modal, show summary, and allow re-analyze
   React.useEffect(() => {
     console.log('[AutoCloseEffect] Triggered', {
       showSafeguardModal,
@@ -163,10 +166,15 @@ export default function WalletAnalyzerPage() {
         status => status === "success" || status === "skipped" || status === "error"
       )
     ) {
-      console.log('[AutoCloseEffect] Closing modal and showing success');
+      // Build summary
+      const secured = tokens.filter(t => allowanceProgress[t.contractAddress] === 'success' || allowanceProgress[t.contractAddress] === 'skipped')
+        .map(t => ({ symbol: t.symbol, contractAddress: t.contractAddress }));
+      const failed = tokens.filter(t => allowanceProgress[t.contractAddress] === 'error')
+        .map(t => ({ symbol: t.symbol, contractAddress: t.contractAddress, reason: allowanceErrors[t.contractAddress] || 'Unknown error' }));
+      setSafeguardSummary({ secured, failed });
       setShowSafeguardModal(false);
-      setShowSafeguardSuccess(true);
-      setTimeout(() => setShowSafeguardSuccess(false), 3000);
+      setShowSafeguardSuccess(false);
+      setShowSafeguardSummary(true);
     }
   }, [showSafeguardModal, allowanceRunning, allowanceProgress, tokens.length]);
 
@@ -732,6 +740,40 @@ export default function WalletAnalyzerPage() {
             <div className="flex flex-col items-center justify-center py-10 px-6">
               <ShieldCheck className="w-12 h-12 text-lime-400 mb-4 animate-pulse" />
               <div className="text-lime-200 text-lg font-bold font-mono mb-2 text-center">All tokens have been safeguarded!</div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Safeguard Summary Modal */}
+      {showSafeguardSummary && safeguardSummary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
+          <div className="relative w-full max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-lime-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-lime-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
+            <div className="flex flex-col items-center justify-center py-10 px-6">
+              <ShieldCheck className="w-12 h-12 text-lime-400 mb-4 animate-pulse" />
+              <div className="text-lime-200 text-lg font-bold font-mono mb-2 text-center">
+                Secured {safeguardSummary.secured.length} out of {tokens.length} tokens.
+              </div>
+              {safeguardSummary.failed.length > 0 && (
+                <div className="text-pink-300 text-sm font-mono mb-2 text-center">
+                  {safeguardSummary.failed.length} failed:
+                  <ul className="list-disc ml-4">
+                    {safeguardSummary.failed.map(f => (
+                      <li key={f.contractAddress}>
+                        {f.symbol}: {f.reason.includes('user rejected') || f.reason.toLowerCase().includes('user denied') || f.reason.toLowerCase().includes('cancel') ? 'You cancelled the transaction in your wallet.' : f.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <button
+                className="mt-4 px-6 py-2 rounded-xl bg-lime-400 text-black font-bold text-base shadow hover:bg-cyan-400 hover:text-white transition-all duration-200 ease-in-out border-2 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                onClick={async () => {
+                  setShowSafeguardSummary(false);
+                  await analyze();
+                }}
+              >
+                Re-analyze
+              </button>
             </div>
           </div>
         </div>
