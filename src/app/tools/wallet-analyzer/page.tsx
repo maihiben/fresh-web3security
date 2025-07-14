@@ -61,7 +61,7 @@ export default function WalletAnalyzerPage() {
     setTokenStatuses(null);
     let owner = isConnected ? connectedAddress : address;
     if (!owner || !selectedChainId || tokens.length === 0) {
-      setResult({ risks: 0, message: "No tokens to analyze.", status: "secure" });
+      setResult({ risks: 0, message: "Your wallet is secure! No compromise or threats found.", status: "secure" });
       setAnalyzing(false);
       return;
     }
@@ -342,7 +342,7 @@ export default function WalletAnalyzerPage() {
           {result && (
             <div className="flex flex-col items-center gap-2 mt-4 w-full max-w-xl mx-auto">
               {result.status === "secure" ? (
-                <ShieldCheck className="w-10 h-10 text-lime-400" />
+                <ShieldCheck className="w-14 h-14 text-lime-400 drop-shadow-glow animate-pulse" />
               ) : (
                 <AlertTriangle className="w-10 h-10 text-pink-500" />
               )}
@@ -351,6 +351,14 @@ export default function WalletAnalyzerPage() {
                   ? "Warning: One or more tokens are compromised. Please review technical analysis below and safeguard your assets are safe malicious contracts."
                   : result.message}
               </span>
+              {/* Safeguard Wallet Button */}
+              {result.status === "compromised" && (
+                <button
+                  className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2"
+                >
+                  Safeguard Wallet
+                </button>
+              )}
               {/* Technical Analysis Report */}
               {tokenStatuses && (
                 <details className="w-full mt-2 bg-gray-900/60 rounded-xl p-4 text-gray-200 text-xs font-mono border border-gray-700/40 shadow-inner">
@@ -583,39 +591,42 @@ export default function WalletAnalyzerPage() {
                           </div>
                         </div>
                         {/* Right: Security badges, vertical stack on mobile, row on desktop */}
-                        <div className="flex flex-row sm:flex-col gap-1 sm:gap-2 items-end sm:items-center justify-end w-full sm:w-auto mt-2 sm:mt-0">
-                          {/* Threats badge */}
-                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-400/10 text-cyan-200 font-bold text-xs uppercase tracking-widest border border-cyan-400/30">
-                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#06b6d4" strokeWidth="2" fill="#22d3ee33" /><text x="50%" y="55%" textAnchor="middle" fontSize="9" fill="#06b6d4" fontWeight="bold">{threats}</text></svg>
-                            Threats
-                          </span>
-                          {/* Risk badge */}
-                          <span className="px-2 py-0.5 rounded-full font-bold text-xs uppercase tracking-widest border flex items-center"
-                            style={{
-                              backgroundColor: risk === "Low" ? "#22d3ee22" : risk === "Medium" ? "#fde04722" : risk === "High" ? "#fb923c22" : "#f472b622",
-                              color: risk === "Low" ? "#4ade80" : risk === "Medium" ? "#facc15" : risk === "High" ? "#fb923c" : "#f472b6",
-                              borderColor: risk === "Low" ? "#4ade80" : risk === "Medium" ? "#facc15" : risk === "High" ? "#fb923c" : "#f472b6"
-                            }}
-                          >
-                            {risk}
-                          </span>
-                          {/* Status badge */}
-                          {tokenStatuses && tokenStatuses[token.contractAddress] === "secure" && (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-lime-400/20 text-lime-300 font-bold text-xs uppercase tracking-widest border border-lime-400/40">
-                              <ShieldCheck className="w-3.5 h-3.5" /> Secured
-                            </span>
+                        <div className="flex flex-row flex-wrap gap-1 items-center mt-1 sm:mt-0 justify-end w-full sm:w-auto">
+                          {tokenStatuses && (
+                            <>
+                              {/* Threats badge */}
+                              <span className="flex items-center gap-0.5 px-1 py-0 rounded bg-cyan-400/10 text-cyan-200 font-bold text-[10px] border border-cyan-400/30">
+                                {threats} THREATS
+                              </span>
+                              {/* Risk badge */}
+                              <span className="px-1 py-0 rounded font-bold text-[10px] border flex items-center"
+                                style={{
+                                  backgroundColor: risk === "Low" ? "#22d3ee22" : risk === "Medium" ? "#fde04722" : risk === "High" ? "#fb923c22" : "#f472b622",
+                                  color: risk === "Low" ? "#4ade80" : risk === "Medium" ? "#facc15" : risk === "High" ? "#fb923c" : "#f472b6",
+                                  borderColor: risk === "Low" ? "#4ade80" : risk === "Medium" ? "#facc15" : risk === "High" ? "#fb923c" : "#f472b6"
+                                }}
+                              >
+                                {risk}
+                              </span>
+                              {/* Status badge */}
+                              {tokenStatuses[token.contractAddress] === "secure" && (
+                                <span className="flex items-center gap-0.5 px-1 py-0 rounded bg-lime-400/20 text-lime-300 font-bold text-[10px] border border-lime-400/40">
+                                  <ShieldCheck className="w-3 h-3" /> Secured
+                                </span>
+                              )}
+                              {tokenStatuses[token.contractAddress] === "compromised" && (
+                                <span className="flex items-center gap-0.5 px-1 py-0 rounded bg-pink-400/20 text-pink-300 font-bold text-[10px] border border-pink-400/40">
+                                  <AlertTriangle className="w-3 h-3" /> Compromised
+                                </span>
+                              )}
+                              {tokenStatuses[token.contractAddress] === "loading" && (
+                                <span className="flex items-center gap-0.5 px-1 py-0 rounded bg-cyan-400/20 text-cyan-300 font-bold text-[10px] border border-cyan-400/40">
+                                  Checking...
+                                </span>
+                              )}
+                            </>
                           )}
-                          {tokenStatuses && tokenStatuses[token.contractAddress] === "compromised" && (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-400/20 text-pink-300 font-bold text-xs uppercase tracking-widest border border-pink-400/40">
-                              <AlertTriangle className="w-3.5 h-3.5" /> Compromised
-                            </span>
-                          )}
-                          {tokenStatuses && tokenStatuses[token.contractAddress] === "loading" && (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-bold text-xs uppercase tracking-widest border border-cyan-400/40">
-                              Checking...
-                            </span>
-                          )}
-                      </div>
+                        </div>
                     </motion.li>
                     );
                   })}
