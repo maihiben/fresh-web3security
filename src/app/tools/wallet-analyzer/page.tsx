@@ -55,6 +55,12 @@ export default function WalletAnalyzerPage() {
   const [selectedChainId, setSelectedChainId] = useState<number | undefined>(undefined);
   const { tokens, loading: tokensLoading, error: tokensError } = useTokenBalances(wagmiIsConnected && selectedChainId ? connectedAddress : undefined, wagmiIsConnected && selectedChainId ? selectedChainId : undefined);
 
+  // Clear analysis result and report when chain changes
+  React.useEffect(() => {
+    setResult(null);
+    setTokenStatuses(null);
+  }, [selectedChainId]);
+
   const handleAnalyze = async () => {
     setAnalyzing(true);
     setResult(null);
