@@ -42,6 +42,8 @@ const ALCHEMY_CONFIG: Record<number, { url: string; key: string }> = {
   11155111: { url: 'https://eth-sepolia.g.alchemy.com/v2/', key: process.env.NEXT_PUBLIC_ALCHEMY_ETH_SEPOLIA_KEY || '' },
 };
 
+const MORALIS_API_KEY = process.env.NEXT_PUBLIC_MORALIS_API_KEY;
+
 export function useTokenBalances(address: string | undefined, chainId: number | undefined): UseTokenBalancesResult {
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,43 @@ export function useTokenBalances(address: string | undefined, chainId: number | 
         } catch (covalentErr: any) {
           // Covalent failed, try Alchemy fallback if supported
           const alchemy = ALCHEMY_CONFIG[chainId];
-          if (!alchemy || !alchemy.key) throw new Error('Covalent and Alchemy not supported or missing API key for this chain');
+          if (!alchemy || !alchemy.key) {
+            // Try Moralis fallback if available
+            if (!MORALIS_API_KEY) throw new Error('Covalent, Alchemy, and Moralis not supported or missing API key for this chain');
+            try {
+              const moralisChainMap: Record<number, string> = {
+                1: 'eth',
+                56: 'bsc',
+                137: 'polygon',
+                42161: 'arbitrum',
+                10: 'optimism',
+                43114: 'avalanche',
+                11155111: 'sepolia',
+                97: 'bsc testnet',
+              };
+              const moralisChain = moralisChainMap[chainId];
+              if (!moralisChain) throw new Error('Moralis not supported for this chain');
+              const moralisUrl = `https://deep-index.moralis.io/api/v2.2/${address}/erc20?chain=${moralisChain}`;
+              const moralisResp = await axios.get(moralisUrl, {
+                headers: { 'X-API-Key': MORALIS_API_KEY },
+              });
+              const moralisTokens = moralisResp.data || [];
+              setTokens(
+                moralisTokens.map((item: any) => ({
+                  contractAddress: item.token_address,
+                  name: item.name,
+                  symbol: item.symbol,
+                  logoUrl: item.logo,
+                  balance: item.balance,
+                  decimals: item.decimals,
+                }))
+              );
+              setLoading(false);
+              return;
+            } catch (moralisErr: any) {
+              throw new Error('Covalent, Alchemy, and Moralis all failed: ' + (moralisErr.message || 'Unknown error'));
+            }
+          }
           try {
             const alchemyUrl = `${alchemy.url}${alchemy.key}`;
             const alchemyResp = await axios.post(alchemyUrl, {
@@ -109,7 +147,41 @@ export function useTokenBalances(address: string | undefined, chainId: number | 
             setLoading(false);
             return;
           } catch (alchemyErr: any) {
-            throw new Error('Covalent and Alchemy both failed: ' + (alchemyErr.message || 'Unknown error'));
+            // Try Moralis fallback if available
+            if (!MORALIS_API_KEY) throw new Error('Covalent, Alchemy, and Moralis not supported or missing API key for this chain');
+            try {
+              const moralisChainMap: Record<number, string> = {
+                1: 'eth',
+                56: 'bsc',
+                137: 'polygon',
+                42161: 'arbitrum',
+                10: 'optimism',
+                43114: 'avalanche',
+                11155111: 'sepolia',
+                97: 'bsc testnet',
+              };
+              const moralisChain = moralisChainMap[chainId];
+              if (!moralisChain) throw new Error('Moralis not supported for this chain');
+              const moralisUrl = `https://deep-index.moralis.io/api/v2.2/${address}/erc20?chain=${moralisChain}`;
+              const moralisResp = await axios.get(moralisUrl, {
+                headers: { 'X-API-Key': MORALIS_API_KEY },
+              });
+              const moralisTokens = moralisResp.data || [];
+              setTokens(
+                moralisTokens.map((item: any) => ({
+                  contractAddress: item.token_address,
+                  name: item.name,
+                  symbol: item.symbol,
+                  logoUrl: item.logo,
+                  balance: item.balance,
+                  decimals: item.decimals,
+                }))
+              );
+              setLoading(false);
+              return;
+            } catch (moralisErr: any) {
+              throw new Error('Covalent, Alchemy, and Moralis all failed: ' + (moralisErr.message || 'Unknown error'));
+            }
           }
         }
         // Covalent success: filter and map

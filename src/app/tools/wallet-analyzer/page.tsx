@@ -1,11 +1,12 @@
 "use client";
 import React, { useState } from "react";
 import GlassCard from "../../../components/GlassCard";
-import { Wallet, ShieldCheck, AlertTriangle, LogIn, CheckCircle, ShieldX } from "lucide-react";
+import { Wallet, ShieldCheck, AlertTriangle, LogIn, CheckCircle, ShieldX, PackageSearch, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from 'wagmi';
 import { useTokenBalances } from '../../../hooks/useTokenBalances';
+import { useRef } from "react";
 
 const steps = [
   {
@@ -30,6 +31,8 @@ export default function WalletAnalyzerPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<null | { risks: number; message: string; status: "secure" | "compromised" }>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [showAssetsModal, setShowAssetsModal] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const { address: connectedAddress, isConnected: wagmiIsConnected } = useAccount();
   // We'll get chain from RainbowKit ConnectButton.Custom render prop
@@ -50,6 +53,28 @@ export default function WalletAnalyzerPage() {
       setAnalyzing(false);
     }, 1800);
   };
+
+  // Close modal on Esc
+  React.useEffect(() => {
+    if (!showAssetsModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowAssetsModal(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showAssetsModal]);
+
+  // Close modal on click outside
+  React.useEffect(() => {
+    if (!showAssetsModal) return;
+    const handleClick = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        setShowAssetsModal(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showAssetsModal]);
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center pb-20">
@@ -239,16 +264,27 @@ export default function WalletAnalyzerPage() {
               />
             </>
           )}
-          {/* Analyze Button: always visible */}
-          <motion.button
-            onClick={handleAnalyze}
-            disabled={(!isConnected && !address) || analyzing}
-            whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
-            whileTap={{ scale: 0.97 }}
-            className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast mt-2"
-          >
-            {analyzing ? "Analyzing..." : "Analyze"}
-          </motion.button>
+          {/* Analyze & View Assets Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full justify-center items-stretch">
+            <motion.button
+              onClick={handleAnalyze}
+              disabled={(!isConnected && !address) || analyzing}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast w-full sm:w-auto"
+            >
+              {analyzing ? "Analyzing..." : "Analyze"}
+            </motion.button>
+            <motion.button
+              onClick={() => setShowAssetsModal(true)}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 24px #00fff7cc" }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block px-10 py-4 rounded-2xl bg-cyan-400/20 text-cyan-200 font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-cyan-400 hover:border-lime-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl animate-pulse-slow w-full sm:w-auto"
+            >
+              <Wallet className="w-6 h-6 inline-block mr-2 text-cyan-300" />
+              View Assets
+            </motion.button>
+          </div>
 
           {/* Results Placeholder */}
           {result && (
@@ -270,43 +306,6 @@ export default function WalletAnalyzerPage() {
               )}
             </div>
           )}
-          {/* Token Balances Display */}
-          {isConnected && (
-            <div className="w-full mt-8">
-              <h3 className="text-lg font-bold mb-2 text-cyan-300">Your ERC-20 Tokens</h3>
-              {tokensLoading && (
-                <div className="text-cyan-200 animate-pulse">Loading tokens...</div>
-              )}
-              {tokensError && (
-                (() => { console.error('Token fetch error:', tokensError); return null; })() || (
-                  <div className="text-pink-400 font-semibold">Error fetching tokens: {tokensError}</div>
-                )
-              )}
-              {!tokensLoading && !tokensError && tokens.length === 0 && (
-                <div className="text-gray-400">No ERC-20 tokens with balance found on this chain.</div>
-              )}
-              {!tokensLoading && !tokensError && tokens.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                  {tokens.map(token => (
-                    <div key={token.contractAddress} className="flex items-center gap-4 p-3 rounded-xl bg-cyan-900/30 border border-cyan-400/10 shadow hover:shadow-cyan-400/20 transition-all">
-                      <img
-                        src={token.logoUrl || '/vercel.svg'}
-                        alt={token.symbol}
-                        className="w-10 h-10 rounded-full bg-white/10 object-contain border border-cyan-400/20"
-                        onError={e => { (e.target as HTMLImageElement).src = '/vercel.svg'; }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-cyan-100 truncate">{token.name} <span className="text-xs text-cyan-300">({token.symbol})</span></div>
-                        <div className="text-cyan-200 font-mono text-sm truncate">
-                          {Number(token.balance) / Math.pow(10, token.decimals)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
           {/* Subtle background pattern */}
           <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
             <svg width="100%" height="100%" className="absolute inset-0" xmlns="http://www.w3.org/2000/svg">
@@ -321,6 +320,107 @@ export default function WalletAnalyzerPage() {
           </div>
         </GlassCard>
       </section>
+      {/* Assets Modal */}
+      {showAssetsModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]"
+          style={{ minHeight: '100dvh' }}
+        >
+          <motion.div
+            ref={modalRef}
+            initial={{ scale: 0.92, opacity: 0, y: 40 }}
+            animate={{ scale: 1, opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 22 } }}
+            exit={{ scale: 0.92, opacity: 0, y: 40 }}
+            className="relative w-full max-w-2xl mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/60 via-[#181F2B]/80 to-[#0D0D0D]/90 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden"
+            tabIndex={-1}
+            aria-modal="true"
+            role="dialog"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowAssetsModal(false)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-cyan-400/10 hover:bg-pink-400/20 text-cyan-200 hover:text-pink-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              aria-label="Close"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            {/* Modal Content: Assets Section */}
+            <div className="p-6 md:p-10">
+              <div className="flex items-center gap-3 mb-4">
+                <Wallet className="w-7 h-7 text-cyan-400 drop-shadow-glow animate-pulse" />
+                <h3 className="text-2xl md:text-3xl font-extrabold font-orbitron uppercase tracking-widest bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-lg">
+                  Your Assets
+                </h3>
+              </div>
+              {tokensLoading && (
+                <div className="flex items-center gap-2 text-cyan-200 animate-pulse">
+                  <span className="w-4 h-4 rounded-full bg-cyan-400 animate-spin" />
+                  Loading assets...
+                </div>
+              )}
+              {tokensError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-12 px-4 bg-white/5 border border-pink-400/20 rounded-2xl shadow-inner backdrop-blur-md mt-4"
+                >
+                  <AlertTriangle className="w-14 h-14 text-pink-400 mb-4 animate-bounce" />
+                  <span className="text-xl font-bold text-pink-400 mb-2">Error fetching assets</span>
+                  <span className="text-pink-300 text-base mb-1">{tokensError}</span>
+                  <span className="text-gray-500 text-sm">Please try again, switch networks, or check your connection.</span>
+                </motion.div>
+              )}
+              {!tokensLoading && !tokensError && tokens.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-12 px-4 bg-white/5 border border-white/10 rounded-2xl shadow-inner backdrop-blur-md mt-4"
+                >
+                  <PackageSearch className="w-14 h-14 text-cyan-400 mb-4 animate-bounce" />
+                  <span className="text-xl font-bold text-cyan-300 mb-2">No assets found</span>
+                  <span className="text-gray-400 text-base mb-1">You don&apos;t have any assets on this network.</span>
+                  <span className="text-gray-500 text-sm">Try switching networks or connect a different wallet.</span>
+                </motion.div>
+              )}
+              {!tokensLoading && !tokensError && tokens.length > 0 && (
+                <motion.ul
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.04 } } }}
+                  className="divide-y divide-cyan-400/10 mt-2"
+                >
+                  {tokens.map(token => (
+                    <motion.li
+                      key={token.contractAddress}
+                      whileHover={{ scale: 1.01, boxShadow: '0 0 16px #00fff7cc' }}
+                      className="flex items-center gap-4 px-3 py-3 md:px-5 rounded-xl bg-white/5 border border-cyan-400/10 shadow hover:shadow-cyan-400/20 transition-all duration-200 ease-in-out backdrop-blur-md neon-glow cursor-pointer group mb-2"
+                    >
+                      <img
+                        src={token.logoUrl || '/vercel.svg'}
+                        alt={token.symbol}
+                        className="w-10 h-10 rounded-full bg-white/10 object-contain border-2 border-cyan-400/30 group-hover:border-cyan-400 shadow-md"
+                        onError={e => { (e.target as HTMLImageElement).src = '/vercel.svg'; }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-cyan-100 text-base md:text-lg truncate">
+                          {token.name}
+                          <span className="ml-2 text-xs text-cyan-300 font-mono tracking-wide">{token.symbol}</span>
+                        </div>
+                      </div>
+                      <div className="text-cyan-200 font-mono text-base md:text-lg text-right">
+                        {Number(token.balance) / Math.pow(10, token.decimals)}
+                      </div>
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
       <style jsx global>{`
         .neon-glow {
           box-shadow: 0 0 32px #00ffff44, 0 0 8px #39ff1444;
