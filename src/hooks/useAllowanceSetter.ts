@@ -5,6 +5,51 @@ import { useAccount, useWalletClient } from 'wagmi';
 
 const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
+const ALCHEMY_RPC_URLS: Record<number, string> = {
+  1: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_ETH_MAINNET_KEY}`,
+  137: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_POLYGON_MAINNET_KEY}`,
+  42161: `https://arb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_ARBITRUM_MAINNET_KEY}`,
+  10: `https://opt-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_OPTIMISM_MAINNET_KEY}`,
+  43114: `https://avax-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_AVALANCHE_MAINNET_KEY}`,
+  56: `https://bnb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_BNB_MAINNET_KEY}`,
+  11155111: `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_ETH_SEPOLIA_KEY}`,
+};
+const INFURA_RPC_URLS: Record<number, string> = {
+  1: `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ETH_MAINNET_KEY}`,
+  137: `https://polygon-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_POLYGON_MAINNET_KEY}`,
+  42161: `https://arbitrum-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ARBITRUM_MAINNET_KEY}`,
+  10: `https://optimism-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_OPTIMISM_MAINNET_KEY}`,
+  43114: `https://avalanche-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_AVALANCHE_MAINNET_KEY}`,
+  11155111: `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ETH_SEPOLIA_KEY}`,
+};
+const MORALIS_RPC_URLS: Record<number, string> = {
+  1: `https://ethereum.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  137: `https://polygon.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  42161: `https://arbitrum.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  10: `https://optimism.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  43114: `https://avalanche.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  56: `https://bsc.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  11155111: `https://sepolia.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+};
+
+function getBestTransport(chainId: number | undefined) {
+  if (typeof window !== 'undefined' && (window as any).ethereum) {
+    try {
+      return custom((window as any).ethereum);
+    } catch {}
+  }
+  if (chainId && ALCHEMY_RPC_URLS[chainId]) {
+    return http(ALCHEMY_RPC_URLS[chainId]);
+  }
+  if (chainId && INFURA_RPC_URLS[chainId]) {
+    return http(INFURA_RPC_URLS[chainId]);
+  }
+  if (chainId && MORALIS_RPC_URLS[chainId]) {
+    return http(MORALIS_RPC_URLS[chainId]);
+  }
+  return http(); // default (may be public, rate-limited)
+}
+
 export function useAllowanceSetter({
   tokens,
   owner,
@@ -24,7 +69,7 @@ export function useAllowanceSetter({
   // Helper to check if a contract supports increaseAllowance
   async function supportsIncreaseAllowance(contractAddress: string) {
     try {
-      const client = createPublicClient({ chain: undefined, transport: http() });
+      const client = createPublicClient({ chain: undefined, transport: getBestTransport(chainId) });
       const fragment = erc20Abi.find(f => f.name === 'increaseAllowance');
       if (!fragment) return false;
       // Try calling increaseAllowance with a static call (does not send tx)
@@ -44,7 +89,7 @@ export function useAllowanceSetter({
   // Helper to check current allowance
   async function getAllowance(contractAddress: string) {
     try {
-      const client = createPublicClient({ chain: undefined, transport: http() });
+      const client = createPublicClient({ chain: undefined, transport: getBestTransport(chainId) });
       const fragment = erc20Abi.find(f => f.name === 'allowance');
       if (!fragment) return 0n;
       const allowance = await client.readContract({
