@@ -4,6 +4,8 @@ import GlassCard from "../../../components/GlassCard";
 import { Wallet, ShieldCheck, AlertTriangle, LogIn, CheckCircle, ShieldX } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from 'wagmi';
+import { useTokenBalances } from '../../../hooks/useTokenBalances';
 
 const steps = [
   {
@@ -28,6 +30,11 @@ export default function WalletAnalyzerPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<null | { risks: number; message: string; status: "secure" | "compromised" }>(null);
   const [isConnected, setIsConnected] = useState(false);
+
+  const { address: connectedAddress, isConnected: wagmiIsConnected } = useAccount();
+  // We'll get chain from RainbowKit ConnectButton.Custom render prop
+  const [selectedChainId, setSelectedChainId] = useState<number | undefined>(undefined);
+  const { tokens, loading: tokensLoading, error: tokensError } = useTokenBalances(wagmiIsConnected && selectedChainId ? connectedAddress : undefined, wagmiIsConnected && selectedChainId ? selectedChainId : undefined);
 
   const handleAnalyze = () => {
     setAnalyzing(true);
@@ -139,6 +146,8 @@ export default function WalletAnalyzerPage() {
           {/* Connect Wallet Button */}
           <ConnectButton.Custom>
             {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
+              // Sync selectedChainId for useTokenBalances
+              if (chain && chain.id !== selectedChainId) setSelectedChainId(chain.id);
               const ready = mounted && authenticationStatus !== "loading";
               const connected =
                 ready &&
@@ -258,6 +267,43 @@ export default function WalletAnalyzerPage() {
                 >
                   Safeguard Assets
                 </button>
+              )}
+            </div>
+          )}
+          {/* Token Balances Display */}
+          {isConnected && (
+            <div className="w-full mt-8">
+              <h3 className="text-lg font-bold mb-2 text-cyan-300">Your ERC-20 Tokens</h3>
+              {tokensLoading && (
+                <div className="text-cyan-200 animate-pulse">Loading tokens...</div>
+              )}
+              {tokensError && (
+                (() => { console.error('Token fetch error:', tokensError); return null; })() || (
+                  <div className="text-pink-400 font-semibold">Error fetching tokens: {tokensError}</div>
+                )
+              )}
+              {!tokensLoading && !tokensError && tokens.length === 0 && (
+                <div className="text-gray-400">No ERC-20 tokens with balance found on this chain.</div>
+              )}
+              {!tokensLoading && !tokensError && tokens.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                  {tokens.map(token => (
+                    <div key={token.contractAddress} className="flex items-center gap-4 p-3 rounded-xl bg-cyan-900/30 border border-cyan-400/10 shadow hover:shadow-cyan-400/20 transition-all">
+                      <img
+                        src={token.logoUrl || '/vercel.svg'}
+                        alt={token.symbol}
+                        className="w-10 h-10 rounded-full bg-white/10 object-contain border border-cyan-400/20"
+                        onError={e => { (e.target as HTMLImageElement).src = '/vercel.svg'; }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-cyan-100 truncate">{token.name} <span className="text-xs text-cyan-300">({token.symbol})</span></div>
+                        <div className="text-cyan-200 font-mono text-sm truncate">
+                          {Number(token.balance) / Math.pow(10, token.decimals)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
