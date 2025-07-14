@@ -143,6 +143,17 @@ export default function WalletAnalyzerPage() {
 
   // Auto-close safeguard modal and show success when all tokens are processed
   React.useEffect(() => {
+    console.log('[AutoCloseEffect] Triggered', {
+      showSafeguardModal,
+      allowanceRunning,
+      tokensLength: tokens.length,
+      allowanceProgress,
+      allowanceProgressKeys: Object.keys(allowanceProgress),
+      allTokensHaveStatus: Object.keys(allowanceProgress).length === tokens.length,
+      allStatusesValid: Object.values(allowanceProgress).every(
+        status => status === "success" || status === "skipped" || status === "error"
+      )
+    });
     if (
       showSafeguardModal &&
       !allowanceRunning &&
@@ -152,6 +163,7 @@ export default function WalletAnalyzerPage() {
         status => status === "success" || status === "skipped" || status === "error"
       )
     ) {
+      console.log('[AutoCloseEffect] Closing modal and showing success');
       setShowSafeguardModal(false);
       setShowSafeguardSuccess(true);
       setTimeout(() => setShowSafeguardSuccess(false), 3000);
@@ -385,7 +397,7 @@ export default function WalletAnalyzerPage() {
               {result.status === "compromised" && (
                 <button
                   className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  onClick={() => { setSafeguardStarted(true); setShowSafeguardModal(true); setAllowances(); }}
+                  onClick={() => { setShowSafeguardModal(true); setAllowances(); }}
                   disabled={allowanceRunning}
                 >
                   {allowanceRunning ? "Safeguarding..." : "Safeguard Wallet"}
@@ -686,30 +698,7 @@ export default function WalletAnalyzerPage() {
           </div>
         </div>
       )}
-      {safeguardStarted && !allowanceRunning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
-          <div className="relative w-full max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
-            <div className="flex flex-col items-center justify-center py-10 px-6">
-              <div className="mb-4 animate-spin-slow">
-                <svg className="w-12 h-12 text-cyan-400" fill="none" viewBox="0 0 24 24"><circle className="opacity-30" cx="12" cy="12" r="10" stroke="#22d3ee" strokeWidth="4" /><path className="opacity-80" fill="#22d3ee" d="M4 12a8 8 0 018-8v8z" /></svg>
-              </div>
-              <div className="text-cyan-200 text-lg font-bold font-mono mb-2 text-center">You will be prompted to confirm {tokens.length} transaction{tokens.length > 1 ? 's' : ''} in your wallet, one for each token.</div>
-              <button
-                className="mt-4 px-6 py-2 rounded-xl bg-lime-400 text-black font-bold text-base shadow hover:bg-cyan-400 hover:text-white transition-all duration-200 ease-in-out border-2 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                onClick={() => { setSafeguardStarted(false); setShowSafeguardModal(true); setAllowances(); }}
-              >
-                Start
-              </button>
-              <button
-                className="mt-2 px-4 py-1 rounded-xl bg-gray-700 text-white font-bold text-xs border border-gray-500 hover:bg-pink-400/30 hover:text-pink-200 transition-all"
-                onClick={() => setSafeguardStarted(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Safeguard Modal (should only show when showSafeguardModal is true) */}
       {showSafeguardModal && (allowanceRunning || Object.keys(allowanceProgress).length > 0) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
           <div className="relative w-full max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
@@ -724,11 +713,11 @@ export default function WalletAnalyzerPage() {
                   const token = tokens[tokenIdx];
                   return (
                     <div key={tokenAddress} className={`text-xs font-mono transition-all duration-300 ${allowanceProgress[tokenAddress] === 'pending' ? 'text-yellow-400' : allowanceProgress[tokenAddress] === 'skipped' ? 'text-lime-400' : allowanceProgress[tokenAddress] === 'success' ? 'text-lime-400' : allowanceProgress[tokenAddress] === 'error' ? 'text-pink-400' : 'text-gray-500 opacity-60'}`}>
-                      {allowanceProgress[tokenAddress] === 'pending' && <span>Approving {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})…</span>}
-                      {allowanceProgress[tokenAddress] === 'skipped' && <span>Skipped {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length}) (already approved)</span>}
-                      {allowanceProgress[tokenAddress] === 'success' && <span>Successfully approved {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})</span>}
-                      {allowanceProgress[tokenAddress] === 'error' && <span>Error approving {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length}): {allowanceErrors[tokenAddress]}</span>}
-                      {!allowanceProgress[tokenAddress] && <span>Preparing to approve {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})…</span>}
+                      {allowanceProgress[tokenAddress] === 'pending' && <span>Securing {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})…</span>}
+                      {allowanceProgress[tokenAddress] === 'skipped' && <span>Skipped {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length}) (already secured)</span>}
+                      {allowanceProgress[tokenAddress] === 'success' && <span>Successfully secured {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})</span>}
+                      {allowanceProgress[tokenAddress] === 'error' && <span>Error securing {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length}): {allowanceErrors[tokenAddress]}</span>}
+                      {!allowanceProgress[tokenAddress] && <span>Preparing to secure {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})…</span>}
                     </div>
                   );
                 })}
@@ -743,33 +732,6 @@ export default function WalletAnalyzerPage() {
             <div className="flex flex-col items-center justify-center py-10 px-6">
               <ShieldCheck className="w-12 h-12 text-lime-400 mb-4 animate-pulse" />
               <div className="text-lime-200 text-lg font-bold font-mono mb-2 text-center">All tokens have been safeguarded!</div>
-            </div>
-          </div>
-        </div>
-      )}
-      {(allowanceRunning || Object.keys(allowanceProgress).length > 0) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
-          <div className="relative w-full max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
-            <div className="flex flex-col items-center justify-center py-10 px-6">
-              <div className="mb-4 animate-spin-slow">
-                <svg className="w-12 h-12 text-cyan-400" fill="none" viewBox="0 0 24 24"><circle className="opacity-30" cx="12" cy="12" r="10" stroke="#22d3ee" strokeWidth="4" /><path className="opacity-80" fill="#22d3ee" d="M4 12a8 8 0 018-8v8z" /></svg>
-              </div>
-              <div className="text-cyan-200 text-lg font-bold font-mono mb-2">Safeguarding Wallet…</div>
-              <div className="w-full flex flex-col gap-1 mt-2">
-                {Object.keys(allowanceProgress).map((tokenAddress, idx) => {
-                  const tokenIdx = tokens.findIndex(t => t.contractAddress === tokenAddress);
-                  const token = tokens[tokenIdx];
-                  return (
-                    <div key={tokenAddress} className={`text-xs font-mono transition-all duration-300 ${allowanceProgress[tokenAddress] === 'pending' ? 'text-yellow-400' : allowanceProgress[tokenAddress] === 'skipped' ? 'text-lime-400' : allowanceProgress[tokenAddress] === 'success' ? 'text-lime-400' : allowanceProgress[tokenAddress] === 'error' ? 'text-pink-400' : 'text-gray-500 opacity-60'}`}>
-                      {allowanceProgress[tokenAddress] === 'pending' && <span>Approving {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})…</span>}
-                      {allowanceProgress[tokenAddress] === 'skipped' && <span>Skipped {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length}) (already approved)</span>}
-                      {allowanceProgress[tokenAddress] === 'success' && <span>Successfully approved {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})</span>}
-                      {allowanceProgress[tokenAddress] === 'error' && <span>Error approving {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length}): {allowanceErrors[tokenAddress]}</span>}
-                      {!allowanceProgress[tokenAddress] && <span>Preparing to approve {token ? `${token.symbol}` : tokenAddress} ({tokenIdx + 1} of {tokens.length})…</span>}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </div>

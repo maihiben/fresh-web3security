@@ -144,8 +144,26 @@ export function useAllowanceSetter({
       } catch (err: any) {
         setProgress(prev => ({ ...prev, [token.contractAddress]: 'error' }));
         setErrors(prev => ({ ...prev, [token.contractAddress]: err?.message || 'Unknown error' }));
+      } finally {
+        // Ensure every token gets a status, even if something unexpected happens
+        setProgress(prev => {
+          if (!prev[token.contractAddress]) {
+            return { ...prev, [token.contractAddress]: 'error' };
+          }
+          return prev;
+        });
       }
     }
+    // Double-check: ensure all tokens have a status
+    setProgress(prev => {
+      const updated = { ...prev };
+      for (const token of tokens) {
+        if (!updated[token.contractAddress]) {
+          updated[token.contractAddress] = 'error';
+        }
+      }
+      return updated;
+    });
     setRunning(false);
   };
 
