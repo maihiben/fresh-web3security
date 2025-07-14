@@ -711,6 +711,10 @@ export default function WalletAnalyzerPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]">
           <div className="relative w-full max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-cyan-900/80 via-[#181F2B]/90 to-[#0D0D0D]/95 border-2 border-cyan-400/20 shadow-2xl backdrop-blur-2xl p-0 overflow-hidden flex flex-col items-center">
             <div className="flex flex-col items-center justify-center py-10 px-6">
+              {/* Professional instruction message */}
+              <div className="mb-4 text-cyan-200 text-sm font-semibold text-center">
+                Please keep this page open and approve each transaction in your wallet as prompted. The process will secure your tokens one by one.
+              </div>
               <div className="mb-4 animate-spin-slow">
                 <svg className="w-12 h-12 text-cyan-400" fill="none" viewBox="0 0 24 24"><circle className="opacity-30" cx="12" cy="12" r="10" stroke="#22d3ee" strokeWidth="4" /><path className="opacity-80" fill="#22d3ee" d="M4 12a8 8 0 018-8v8z" /></svg>
               </div>
@@ -765,8 +769,12 @@ export default function WalletAnalyzerPage() {
                   </ul>
                 </div>
               )}
+              {/* Note about re-analyzing and delay */}
+              <div className="text-cyan-200 text-xs font-medium text-center mb-3">
+                Note: It may take a few minutes for your wallet to reflect the updated security status. If your tokens still appear at risk, please try analyzing again after a short wait.
+              </div>
               <button
-                className="mt-4 px-6 py-2 rounded-xl bg-lime-400 text-black font-bold text-base shadow hover:bg-cyan-400 hover:text-white transition-all duration-200 ease-in-out border-2 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                className="mt-1 px-6 py-2 rounded-xl bg-lime-400 text-black font-bold text-base shadow hover:bg-cyan-400 hover:text-white transition-all duration-200 ease-in-out border-2 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 onClick={async () => {
                   setShowSafeguardSummary(false);
                   await analyze();
