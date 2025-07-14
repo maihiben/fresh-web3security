@@ -76,7 +76,10 @@ export default function WalletAnalyzerPage() {
     setTokenStatuses(null);
     setShowProgressModal(true);
     setProgressStep(0);
-    // Animate progress steps over 5 seconds
+    // Animate progress steps over random duration (5-10s)
+    const minMs = 5000, maxMs = 10000;
+    const totalMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    const stepMs = Math.floor(totalMs / progressSteps.length);
     let step = 0;
     const interval = setInterval(() => {
       step++;
@@ -84,8 +87,8 @@ export default function WalletAnalyzerPage() {
       if (step >= progressSteps.length - 1) {
         clearInterval(interval);
       }
-    }, 1000);
-    // Wait 5 seconds before running analysis
+    }, stepMs);
+    // Wait random duration before running analysis
     setTimeout(async () => {
       setShowProgressModal(false);
       let owner = isConnected ? connectedAddress : address;
@@ -130,7 +133,7 @@ export default function WalletAnalyzerPage() {
           : { risks: 0, message: "Secure! All tokens have allowance set for the security spender.", status: "secure" }
       );
       setAnalyzing(false);
-    }, 5000);
+    }, totalMs);
   };
 
   // Close modal on Esc
