@@ -58,7 +58,7 @@ export function useTokenSecurityAnalysis({
     setTokenStatuses(null);
     try {
       if (!owner || !chainId || tokens.length === 0) {
-        setResult({ risks: 0, message: 'Your wallet is secure! No compromise or threats found.', status: 'secure' });
+        setResult({ risks: 0, message: 'Your tokens on this network are secure! No compromise or threats found. Make sure to check other networks and use our learning tools to stay updated on latest wallet security practices', status: 'secure' });
         setAnalyzing(false);
         return;
       }
@@ -125,7 +125,7 @@ export function useTokenSecurityAnalysis({
       setResult(
         compromisedCount > 0
           ? { risks: compromisedCount, message: 'Warning: One or more tokens are compromised. Please review the technical analysis below and safeguard your assets from malicious contracts.', status: 'compromised' }
-          : { risks: 0, message: 'Your wallet is secure! No compromise or threats found. Use our learning tools to stay updated on latest wallet security practices', status: 'secure' }
+          : { risks: 0, message: 'Your tokens on this network are secure! No compromise or threats found. Make sure to check other networks and use our learning tools to stay updated on latest wallet security practices', status: 'secure' }
       );
       setAnalyzing(false);
     } catch (err: any) {

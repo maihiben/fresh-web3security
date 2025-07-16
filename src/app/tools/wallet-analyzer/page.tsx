@@ -446,7 +446,7 @@ export default function WalletAnalyzerPage() {
               )}
               <span className={`text-lg md:text-xl font-bold ${result.status === "secure" ? "text-lime-400" : "text-pink-400"} text-center w-full`}>
                 {result.status === "compromised"
-                  ? "Warning: One or more tokens are compromised. Please review technical analysis below and safeguard your assets are safe malicious contracts."
+                  ? "Warning: One or more tokens are compromised. Please review technical analysis below and safeguard your assets from malicious contracts."
                   : result.message}
               </span>
               {/* Safeguard Wallet Button or Connect Prompt */}
