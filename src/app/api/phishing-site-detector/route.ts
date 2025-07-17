@@ -72,7 +72,7 @@ function brandInSubdomain(domain: string): string | null {
 }
 
 // (Optional) WHOIS API for domain age (free tier, e.g., https://api.api-ninjas.com/v1/whois?domain=...)
-async function getDomainAge(domain: string): Promise<{ ageDays?: number, createdAt?: string, registrar?: string, error?: string }> {
+async function getDomainAge(domain: string): Promise<{ ageDays?: number, createdAt?: string | null, registrar?: string, error?: string }> {
   try {
     const apiKey = process.env.API_NINJAS_KEY;
     if (!apiKey) return { error: 'No WHOIS API key configured.' };
@@ -82,10 +82,24 @@ async function getDomainAge(domain: string): Promise<{ ageDays?: number, created
     if (!res.ok) return { error: 'WHOIS API error.' };
     const data = await res.json();
     if (data && data.creation_date) {
-      const createdAt = data.creation_date;
-      const created = new Date(createdAt);
+      let createdAt = data.creation_date;
+      let createdDate: Date | null = null;
+      // Try to parse as date string or timestamp
+      if (typeof createdAt === 'number') {
+        // If it's a number, treat as timestamp (seconds or ms)
+        createdDate = new Date(createdAt > 1e12 ? createdAt : createdAt * 1000);
+      } else if (typeof createdAt === 'string') {
+        // Try to parse as ISO or date string
+        const tryDate = new Date(createdAt);
+        if (!isNaN(tryDate.getTime())) createdDate = tryDate;
+      }
+      if (createdDate && !isNaN(createdDate.getTime())) {
+        createdAt = createdDate.toISOString().slice(0, 10); // YYYY-MM-DD
+      } else {
+        createdAt = null;
+      }
       const now = new Date();
-      const ageDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      const ageDays = createdDate ? Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : undefined;
       return { ageDays, createdAt, registrar: data.registrar_name };
     }
     return { error: 'No creation date found.' };
@@ -296,6 +310,18 @@ export async function POST(req: NextRequest) {
 
   // --- Blacklist Checks ---
   const scamdbResult = await checkCryptoScamDB(domain);
+  // Fetch raw Chainabuse report data
+  let chainabuseRawReport: any = null;
+  try {
+    const headers: Record<string, string> = {};
+    if (process.env.CHAINABUSE_API_KEY) {
+      headers['x-api-key'] = process.env.CHAINABUSE_API_KEY;
+    }
+    const res = await fetch(`https://api.chainabuse.com/v0/reports?domain=${encodeURIComponent(domain)}`, { headers });
+    if (res.ok) {
+      chainabuseRawReport = await res.json();
+    }
+  } catch {}
   const chainabuseResult = await checkChainabuse(domain);
   const chainabuseBlacklistResult = await checkChainabuseBlacklist(domain);
   const phishfortResult = await checkPhishFort(domain);
@@ -353,7 +379,7 @@ export async function POST(req: NextRequest) {
     console.error('[PhishingSiteDetector] WHOIS API key is missing. Set API_NINJAS_KEY in your environment.');
   }
 
-  let domainAgeInfo: { ageDays?: number, createdAt?: string, registrar?: string, error?: string } = {};
+  let domainAgeInfo: { ageDays?: number, createdAt?: string | null, registrar?: string, error?: string } = {};
   if (process.env.API_NINJAS_KEY) {
     domainAgeInfo = await getDomainAge(domain);
     debugLog.push(`Domain age info: ${JSON.stringify(domainAgeInfo)}`);
@@ -541,6 +567,7 @@ export async function POST(req: NextRequest) {
       domainAge: domainAgeInfo,
     },
     checkedAt: new Date().toISOString(),
+    chainabuseReport: chainabuseRawReport,
     analysisLog,
   };
   // Remove analysisLog from the raw API data (Technical Details) in the response
