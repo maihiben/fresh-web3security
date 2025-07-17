@@ -10,7 +10,7 @@ import { useRef } from "react";
 import { ethers } from "ethers";
 import { useTokenSecurityAnalysis } from '../../../hooks/useTokenSecurityAnalysis';
 import { useAllowanceSetter } from '../../../hooks/useAllowanceSetter';
-import { mainnet, polygon, arbitrum, optimism, avalanche, bsc, sepolia } from 'wagmi/chains';
+import { mainnet, polygon, arbitrum, optimism, avalanche, bsc } from 'wagmi/chains';
 
 const steps = [
   {
@@ -198,7 +198,7 @@ export default function WalletAnalyzerPage() {
     }
   }, [showSafeguardModal, allowanceRunning, allowanceProgress, tokens.length]);
 
-  const supportedChains = [mainnet, polygon, arbitrum, optimism, avalanche, bsc, sepolia];
+  const supportedChains = [mainnet, polygon, arbitrum, optimism, avalanche, bsc];
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center pb-20">
