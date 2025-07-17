@@ -266,7 +266,18 @@ export default function SmartContractScannerPage() {
               </span>
               {/* Risk Level */}
               {result.riskLevel && (
-                <span className="text-base font-semibold text-gray-300 text-center w-full">Risk Level: <span className="font-bold text-white">{result.riskLevel}</span></span>
+                <span className="text-base font-semibold text-gray-300 text-center w-full flex items-center justify-center gap-2">
+                  Risk Level:
+                  {result.riskLevel === 'low' && (
+                    <span className="inline-block px-3 py-1 rounded-full bg-green-600 text-white font-bold text-sm ml-1">Low</span>
+                  )}
+                  {result.riskLevel === 'medium' && (
+                    <span className="inline-block px-3 py-1 rounded-full bg-amber-500 text-white font-bold text-sm ml-1">Medium</span>
+                  )}
+                  {result.riskLevel === 'high' && (
+                    <span className="inline-block px-3 py-1 rounded-full bg-red-600 text-white font-bold text-sm ml-1">High</span>
+                  )}
+                </span>
               )}
               {/* Issues/Warnings */}
               {result.details && result.details.issues && result.details.issues.length > 0 && (
@@ -274,7 +285,7 @@ export default function SmartContractScannerPage() {
                   <div className="font-bold text-yellow-300 mb-1">Vulnerabilities / Issues:</div>
                   <ul className="list-disc ml-6">
                     {result.details.issues.map((issue: any, idx: number) => (
-                      <li key={idx} className="break-all whitespace-pre-wrap"><span className="font-bold">{issue.type}:</span> {issue.description}</li>
+                      <li key={idx} className="break-all whitespace-pre-wrap mb-2"><span className="font-bold">{issue.type}:</span> {issue.description}</li>
                     ))}
                   </ul>
                 </div>
