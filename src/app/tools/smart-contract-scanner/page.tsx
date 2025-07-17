@@ -33,6 +33,7 @@ export default function SmartContractScannerPage() {
   const [account, setAccount] = useState<string | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showFullAbi, setShowFullAbi] = useState(false);
 
   // Validate contract address
   const handleContractChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,7 +274,18 @@ export default function SmartContractScannerPage() {
                   <div className="font-bold text-yellow-300 mb-1">Vulnerabilities / Issues:</div>
                   <ul className="list-disc ml-6">
                     {result.details.issues.map((issue: any, idx: number) => (
-                      <li key={idx}><span className="font-bold">{issue.type}:</span> {issue.description}</li>
+                      <li key={idx} className="break-all whitespace-pre-wrap"><span className="font-bold">{issue.type}:</span> {issue.description}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* Dangerous Functions Section */}
+              {result.details && result.details.dangerousFunctions && result.details.dangerousFunctions.length > 0 && (
+                <div className="w-full bg-red-900/30 rounded-xl p-4 mt-2 text-red-200 text-sm font-mono border border-red-400/20 shadow-inner">
+                  <div className="font-bold text-red-300 mb-1">Dangerous Functions Detected:</div>
+                  <ul className="list-disc ml-6">
+                    {result.details.dangerousFunctions.map((fn: string, idx: number) => (
+                      <li key={idx}><span className="font-bold">{fn}</span> — This function can introduce risks if misused. See technical details for more info.</li>
                     ))}
                   </ul>
                 </div>
@@ -311,6 +323,33 @@ export default function SmartContractScannerPage() {
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
+                {/* Show function list and ABI summary if available */}
+                {result.details && result.details.dangerousFunctions && result.details.dangerousFunctions.length > 0 && (
+                  <div className="mb-2">
+                    <span className="font-bold text-red-300">Dangerous Functions:</span> {result.details.dangerousFunctions.join(', ')}
+                  </div>
+                )}
+                {result.details && result.details.abi && Array.isArray(result.details.abi) && (
+                  <div className="mb-2">
+                    <span className="font-bold text-cyan-300">Contract ABI (summary):</span>
+                    <ul className="list-disc ml-6">
+                      {(showFullAbi ? result.details.abi : result.details.abi.slice(0, 10)).map((item: any, idx: number) => (
+                        <li key={idx}>{item.type === 'function' ? 'function' : item.type}: {item.name} {item.stateMutability ? `(${item.stateMutability})` : ''}</li>
+                      ))}
+                      {!showFullAbi && result.details.abi.length > 10 && (
+                        <li>...and {result.details.abi.length - 10} more</li>
+                      )}
+                    </ul>
+                    {result.details.abi.length > 10 && (
+                      <button
+                        className="mt-2 px-3 py-1 rounded bg-cyan-800 text-white text-xs font-bold hover:bg-cyan-600 transition"
+                        onClick={() => setShowFullAbi((v) => !v)}
+                      >
+                        {showFullAbi ? 'Show Less' : 'Show More'}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <pre className="whitespace-pre-wrap break-all">{JSON.stringify(result.details, null, 2)}</pre>
               </details>
             </div>
