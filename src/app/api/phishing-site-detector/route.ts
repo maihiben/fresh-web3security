@@ -71,41 +71,54 @@ function brandInSubdomain(domain: string): string | null {
   return null;
 }
 
-// (Optional) WHOIS API for domain age (free tier, e.g., https://api.api-ninjas.com/v1/whois?domain=...)
+// Helper: Try multiple API Ninjas keys for WHOIS
+const WHOIS_KEYS = [
+  process.env.API_NINJAS_KEY,
+  process.env.API_NINJAS_KEY_2,
+  process.env.API_NINJAS_KEY_3
+].filter(Boolean);
+
 async function getDomainAge(domain: string): Promise<{ ageDays?: number, createdAt?: string | null, registrar?: string, error?: string }> {
-  try {
-    const apiKey = process.env.API_NINJAS_KEY;
-    if (!apiKey) return { error: 'No WHOIS API key configured.' };
-    const res = await fetch(`https://api.api-ninjas.com/v1/whois?domain=${domain}`, {
-      headers: { 'X-Api-Key': apiKey }
-    });
-    if (!res.ok) return { error: 'WHOIS API error.' };
-    const data = await res.json();
-    if (data && data.creation_date) {
-      let createdAt = data.creation_date;
-      let createdDate: Date | null = null;
-      // Try to parse as date string or timestamp
-      if (typeof createdAt === 'number') {
-        // If it's a number, treat as timestamp (seconds or ms)
-        createdDate = new Date(createdAt > 1e12 ? createdAt : createdAt * 1000);
-      } else if (typeof createdAt === 'string') {
-        // Try to parse as ISO or date string
-        const tryDate = new Date(createdAt);
-        if (!isNaN(tryDate.getTime())) createdDate = tryDate;
+  let lastError = '';
+  for (const apiKey of WHOIS_KEYS) {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiKey) headers['X-Api-Key'] = apiKey;
+      const res = await fetch(`https://api.api-ninjas.com/v1/whois?domain=${domain}`, {
+        headers
+      });
+      if (!res.ok) {
+        lastError = `WHOIS API error: ${res.status}`;
+        continue;
       }
-      if (createdDate && !isNaN(createdDate.getTime())) {
-        createdAt = createdDate.toISOString().slice(0, 10); // YYYY-MM-DD
-      } else {
-        createdAt = null;
+      const data = await res.json();
+      if (data && data.creation_date) {
+        let createdAt = data.creation_date;
+        let createdDate: Date | null = null;
+        if (typeof createdAt === 'number') {
+          createdDate = new Date(createdAt > 1e12 ? createdAt : createdAt * 1000);
+        } else if (typeof createdAt === 'string') {
+          const tryDate = new Date(createdAt);
+          if (!isNaN(tryDate.getTime())) createdDate = tryDate;
+        }
+        if (createdDate && !isNaN(createdDate.getTime())) {
+          createdAt = createdDate.toISOString().slice(0, 10);
+        } else {
+          createdAt = null;
+        }
+        const now = new Date();
+        const ageDays = createdDate ? Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : undefined;
+        return { ageDays, createdAt, registrar: data.registrar_name };
       }
-      const now = new Date();
-      const ageDays = createdDate ? Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : undefined;
-      return { ageDays, createdAt, registrar: data.registrar_name };
+      // If API returns no creation_date, treat as not registered
+      return { error: 'not_registered' };
+    } catch (e: any) {
+      lastError = e?.message || 'WHOIS lookup failed.';
+      continue;
     }
-    return { error: 'No creation date found.' };
-  } catch (e) {
-    return { error: 'WHOIS lookup failed.' };
   }
+  // If all keys fail, return a specific error
+  return { error: 'whois_api_error' };
 }
 
 // Check against CryptoScamDB (MetaMask eth-phishing-detect)
@@ -386,16 +399,31 @@ export async function POST(req: NextRequest) {
   }
 
   // WHOIS failure or unregistered domain logic
-  if ((domainAgeInfo && (domainAgeInfo.error || !domainAgeInfo.createdAt))) {
+  if (domainAgeInfo && domainAgeInfo.error) {
     debugLog.push('WHOIS lookup failed or domain is unregistered.');
-    console.error('[PhishingSiteDetector] WHOIS lookup failed or domain is unregistered.', domainAgeInfo.error || 'No creation date');
+    console.error('[PhishingSiteDetector] WHOIS lookup failed or domain is unregistered.', domainAgeInfo.error);
+    let message = '';
+    let riskScore = 0;
+    let riskLevel = 'low';
+    let scoreBreakdown = {};
+    if (domainAgeInfo.error === 'not_registered') {
+      message = 'Domain is not registered or registration details could not be found. This is a strong indicator of a phishing or fake site.';
+      riskScore = 100;
+      riskLevel = 'high';
+      scoreBreakdown = { whois: 100 };
+    } else {
+      message = 'Domain registration details could not be determined (API error or rate limit). This does not mean the domain is unregistered.';
+      riskScore = 0;
+      riskLevel = 'low';
+      scoreBreakdown = { whois_api_error: 0 };
+    }
     const analysisLog: string[] = debugLog;
     const report = {
-      riskScore: 100,
-      riskLevel: 'high',
-      scoreBreakdown: { whois: 100 },
-      status: 'high',
-      message: 'Domain is not registered or registration details could not be found. This is a strong indicator of a phishing or fake site.',
+      riskScore,
+      riskLevel,
+      scoreBreakdown,
+      status: riskLevel,
+      message,
       domain,
       unicodeDomain,
       tld,
