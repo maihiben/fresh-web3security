@@ -4,6 +4,7 @@ import GlassCard from "../../../components/GlassCard";
 import { FileText, Wallet, AlertTriangle, LogIn, CheckCircle, ShieldX, ShieldAlert, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ethers } from "ethers";
 
 const steps = [
   {
@@ -26,22 +27,48 @@ const steps = [
 export default function SmartContractScannerPage() {
   const [contract, setContract] = useState("");
   const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState<null | { risks: number; message: string; status: "safe" | "risky" }>(null);
+  const [result, setResult] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const handleScan = () => {
+  // Validate contract address
+  const handleContractChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.trim();
+    setContract(value);
+    if (!value) {
+      setInputError(null);
+      return;
+    }
+    if (!ethers.isAddress(value)) {
+      setInputError("Invalid address.");
+    } else {
+      setInputError(null);
+    }
+  };
+
+  // Clear result on chain/account change
+  React.useEffect(() => {
+    setResult(null);
+  }, [chainId, account]);
+
+  const handleScan = async () => {
     setScanning(true);
     setResult(null);
-    setTimeout(() => {
-      // Placeholder: randomly generate a result
-      const risky = Math.random() > 0.5;
-      setResult(
-        risky
-          ? { risks: Math.floor(Math.random() * 2) + 1, message: "Vulnerabilities detected! Proceed with caution.", status: "risky" }
-          : { risks: 0, message: "No vulnerabilities found. Contract appears safe!", status: "safe" }
-      );
-      setScanning(false);
-    }, 1800);
+    try {
+      const res = await fetch('/api/scan-contract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contract, chainId }),
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch (e) {
+      setResult({ status: 'error', message: 'Error analyzing contract.' });
+    }
+    setScanning(false);
   };
 
   return (
@@ -123,14 +150,16 @@ export default function SmartContractScannerPage() {
         <GlassCard className="flex flex-col items-center gap-10 py-12 px-4 md:px-16 relative overflow-hidden bg-gradient-to-br from-purple-900/30 via-[#181F2B]/40 to-[#0D0D0D]/80 border-2 border-purple-400/10 shadow-2xl backdrop-blur-xl">
           {/* Connect Wallet Button */}
           <ConnectButton.Custom>
-            {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
+            {({ account: acc, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
               const ready = mounted && authenticationStatus !== "loading";
               const connected =
                 ready &&
-                account &&
+                acc &&
                 chain &&
                 (!authenticationStatus || authenticationStatus === "authenticated");
               if (isConnected !== !!connected) setIsConnected(!!connected);
+              if (connected && chain && chain.id !== chainId) setChainId(chain.id);
+              if (connected && acc && acc.address !== account) setAccount(acc.address);
               if (!connected) {
                 // Show only connect button and a friendly message
                 return (
@@ -181,10 +210,10 @@ export default function SmartContractScannerPage() {
                     >
                       <Wallet className="w-5 h-5 text-purple-300" />
                       <span className="truncate w-full text-left">
-                        <span className="hidden md:inline">{account?.address}</span>
+                        <span className="hidden md:inline">{account}</span>
                         <span className="inline md:hidden">
-                          {account?.address
-                            ? `${account.address.slice(0, 8)}…${account.address.slice(-6)}`
+                          {account
+                            ? `${account.slice(0, 8)}…${account.slice(-6)}`
                             : ''}
                         </span>
                       </span>
@@ -199,10 +228,11 @@ export default function SmartContractScannerPage() {
                     type="text"
                     placeholder="0x..."
                     value={contract}
-                    onChange={e => setContract(e.target.value)}
+                    onChange={handleContractChange}
                     className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all mb-2 font-mono text-lg shadow-inner"
                     autoComplete="off"
                   />
+                  {inputError && <p className="text-red-400 text-sm mt-1">{inputError}</p>}
                 </>
               );
             }}
@@ -212,7 +242,7 @@ export default function SmartContractScannerPage() {
           {isConnected && (
             <motion.button
               onClick={handleScan}
-              disabled={!contract || scanning}
+              disabled={!contract || !!inputError || scanning || !chainId}
               whileHover={{ scale: 1.05, boxShadow: "0 0 24px #a78bface" }}
               whileTap={{ scale: 0.97 }}
               className="inline-block px-10 py-4 rounded-2xl bg-purple-400 text-black font-extrabold text-xl shadow-lg hover:bg-cyan-400 hover:text-white transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-purple-400 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-xl disabled:opacity-60 disabled:cursor-not-allowed animate-pulse-fast mt-2"
@@ -222,22 +252,67 @@ export default function SmartContractScannerPage() {
           )}
           {/* Results Placeholder */}
           {result && (
-            <div className="flex flex-col items-center gap-2 mt-4">
+            <div className="flex flex-col items-center gap-2 mt-4 w-full max-w-xl mx-auto">
               {result.status === "safe" ? (
                 <CheckCircle className="w-10 h-10 text-purple-400" />
-              ) : (
+              ) : result.status === "risky" ? (
                 <ShieldAlert className="w-10 h-10 text-pink-500" />
+              ) : (
+                <AlertTriangle className="w-10 h-10 text-yellow-400" />
               )}
-              <span className={`text-lg md:text-xl font-bold ${result.status === "safe" ? "text-purple-400" : "text-pink-400"}`}>
+              <span className={`text-lg md:text-xl font-bold ${result.status === "safe" ? "text-purple-400" : result.status === "risky" ? "text-pink-400" : "text-yellow-400"} text-center w-full`}>
                 {result.message}
               </span>
-              {result.status === "risky" && (
-                <button
-                  className="inline-block px-8 py-3 rounded-xl bg-pink-500 text-white font-extrabold text-lg shadow-lg hover:bg-cyan-400 hover:text-black transition-all duration-300 ease-in-out skew-x-[-8deg] border-4 border-pink-500 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 drop-shadow-lg mt-2"
-                >
-                  View Security Recommendations
-                </button>
+              {/* Risk Level */}
+              {result.riskLevel && (
+                <span className="text-base font-semibold text-gray-300 text-center w-full">Risk Level: <span className="font-bold text-white">{result.riskLevel}</span></span>
               )}
+              {/* Issues/Warnings */}
+              {result.details && result.details.issues && result.details.issues.length > 0 && (
+                <div className="w-full bg-yellow-900/30 rounded-xl p-4 mt-2 text-yellow-200 text-sm font-mono border border-yellow-400/20 shadow-inner">
+                  <div className="font-bold text-yellow-300 mb-1">Vulnerabilities / Issues:</div>
+                  <ul className="list-disc ml-6">
+                    {result.details.issues.map((issue: any, idx: number) => (
+                      <li key={idx}><span className="font-bold">{issue.type}:</span> {issue.description}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* Technical Details (collapsible) */}
+              <details className="w-full mt-2 bg-gray-900/60 rounded-xl p-4 text-gray-200 text-xs font-mono border border-gray-700/40 shadow-inner">
+                <summary className="cursor-pointer font-bold text-cyan-300">Technical Details</summary>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-xs">Raw engine data</span>
+                  <button
+                    className="px-3 py-1 rounded bg-cyan-700 text-white text-xs font-bold hover:bg-cyan-500 transition ml-2"
+                    onClick={() => {
+                      const text = JSON.stringify(result.details, null, 2);
+                      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1200);
+                      } else {
+                        // Fallback for older browsers
+                        try {
+                          const textarea = document.createElement('textarea');
+                          textarea.value = text;
+                          document.body.appendChild(textarea);
+                          textarea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textarea);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1200);
+                        } catch (err) {
+                          alert('Copy to clipboard is not supported in this environment.');
+                        }
+                      }
+                    }}
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <pre className="whitespace-pre-wrap break-all">{JSON.stringify(result.details, null, 2)}</pre>
+              </details>
             </div>
           )}
           {/* Subtle background pattern */}
