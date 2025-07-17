@@ -173,7 +173,7 @@ const LiveActivityNotice: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed bottom-6 left-6 z-50 max-w-xs w-[90vw] sm:w-80 pointer-events-none select-none">
+    <div className="fixed bottom-20 sm:bottom-6 left-1/2 sm:left-6 -translate-x-1/2 sm:translate-x-0 z-50 max-w-xs w-[90vw] sm:w-80 pointer-events-none select-none">
       <div
         className={`transition-all duration-500 ease-in-out ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} flex items-center gap-3 rounded-xl bg-white/10 border border-cyan-400/20 shadow-lg backdrop-blur-md px-4 py-3 ring-1 ring-cyan-400/30 animate-glow`}
       >
