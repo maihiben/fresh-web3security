@@ -550,7 +550,7 @@ export default function LearnWeb3SecurityPage() {
               <a href="/tools/smart-contract-scanner" className="px-6 py-3 rounded-lg bg-purple-400/20 border border-purple-400/40 text-purple-200 font-bold hover:bg-purple-400/40 hover:text-white transition-all duration-200">
                 Scan Smart Contracts
               </a>
-              <a href="/tools/revoke-token-approvals" className="px-6 py-3 rounded-lg bg-cyan-400/20 border border-cyan-400/40 text-cyan-200 font-bold hover:bg-cyan-400/40 hover:text-white transition-all duration-200">
+              <a href="/tools/phishing-site-detector" className="px-6 py-3 rounded-lg bg-cyan-400/20 border border-cyan-400/40 text-cyan-200 font-bold hover:bg-cyan-400/40 hover:text-white transition-all duration-200">
                 Revoke Approvals
               </a>
             </div>

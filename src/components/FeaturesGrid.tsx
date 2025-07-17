@@ -11,11 +11,11 @@ const features = [
     button: "Analyze Wallet"
   },
   {
-    icon: <Ban className="text-pink-500 w-10 h-10 md:w-12 md:h-12" />,
-    title: "Revoke Token Approvals",
-    description: "Easily find and revoke dangerous or unnecessary token approvals to protect your assets.",
-    href: "/tools/revoke-token-approvals",
-    button: "Revoke Approvals"
+    icon: <ShieldAlert className="text-yellow-400 w-10 h-10 md:w-12 md:h-12" />,
+    title: "Phishing Site Detector",
+    description: "Check if a website is a known phishing site or scam before connecting your wallet. Stay safe from web3 scams.",
+    href: "/tools/phishing-site-detector",
+    button: "Scan Website"
   },
   {
     icon: <ShieldAlert className="text-lime-400 w-10 h-10 md:w-12 md:h-12" />,

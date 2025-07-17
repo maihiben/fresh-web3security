@@ -15,11 +15,11 @@ const tools = [
     image: "/images/tools/wallet-analyzer.png"
   },
   {
-    icon: <Ban className="text-pink-500 w-12 h-12 md:w-16 md:h-16" />,
-    title: "Revoke Token Approvals",
-    description: "Find and revoke dangerous or unnecessary token approvals to protect your assets.",
-    href: "/tools/revoke-token-approvals",
-    button: "Revoke Now",
+    icon: <ShieldAlert className="text-yellow-400 w-12 h-12 md:w-16 md:h-16" />,
+    title: "Phishing Site Detector",
+    description: "Check if a website is a known phishing site or scam before connecting your wallet. Stay safe from web3 scams.",
+    href: "/tools/phishing-site-detector",
+    button: "Scan Website",
     image: "/images/tools/revoke-approvals.png"
   },
   {
@@ -50,7 +50,7 @@ const tools = [
 
 const sectionVariants = {
   initial: { opacity: 0, y: 40 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.7 } },
 };
 
 const ToolsShowcase: React.FC = () => {

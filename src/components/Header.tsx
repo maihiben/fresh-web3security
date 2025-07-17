@@ -16,7 +16,7 @@ const navLinks = [
 const toolsSubmenu = [
   { name: "Explore Tools", href: "/tools" },
   { name: "Wallet Analyzer", href: "/tools/wallet-analyzer" },
-  { name: "Token Approval Inspector", href: "/tools/revoke-token-approvals" },
+  { name: "Phishing Site Detector", href: "/tools/phishing-site-detector" },
   { name: "Smart Contract Scanner", href: "/tools/smart-contract-scanner" },
   { name: "Fake Token Detector", href: "/tools/detect-fake-tokens" },
 ];

@@ -27,7 +27,7 @@ web3-security/
 │   │   │   ├── page.tsx  # Tools landing page (hero + showcase)
 │   │   │   ├── wallet-analyzer/
 │   │   │   │   └── page.tsx
-│   │   │   ├── revoke-token-approvals/
+│   │   │   ├── phishing-site-detector/
 │   │   │   │   └── page.tsx
 │   │   │   ├── detect-fake-tokens/
 │   │   │   │   └── page.tsx
