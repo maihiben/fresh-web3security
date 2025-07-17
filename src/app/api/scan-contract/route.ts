@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       riskLevel = 'high';
       return NextResponse.json({
         status: 'risky',
-        message: `${ENGINE_NAME}: No contract found at this address.`,
+        message: `${ENGINE_NAME}: No contract found at this address. This may happen if you are scanning on the wrong chain. Please double-check the address and network. If you are sure the network is correct, this address is considered high risk and may be a scam, a typo, or not a contract address.`,
         riskLevel,
         details: {
           contract,
