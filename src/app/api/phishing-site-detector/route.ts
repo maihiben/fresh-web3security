@@ -412,7 +412,7 @@ export async function POST(req: NextRequest) {
       riskLevel = 'high';
       scoreBreakdown = { whois: 100 };
     } else {
-      message = 'Domain registration details could not be determined (API error or rate limit). This does not mean the domain is unregistered.';
+      message = 'Domain registration details could not be checked at this time. This does not mean the domain is unsafe or unregistered.';
       riskScore = 0;
       riskLevel = 'low';
       scoreBreakdown = { whois_api_error: 0 };
